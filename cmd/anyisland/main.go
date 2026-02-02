@@ -132,8 +132,7 @@ var listCmd = &cobra.Command{
 		}
 		defer reg.Close()
 
-	
-tools, err := reg.ListTools()
+		tools, err := reg.ListTools()
 		if err != nil {
 			return err
 		}
@@ -147,6 +146,57 @@ tools, err := reg.ListTools()
 		for _, t := range tools {
 			fmt.Printf("- %s (%s) [%s]\n", t.Name, t.Version, t.Source)
 		}
+		return nil
+	},
+}
+
+var ingestCmd = &cobra.Command{
+	Use:   "ingest [url]",
+	Short: "Ingest a tool from a GitHub URL",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		url := args[0]
+		sys, err := pal.New()
+		if err != nil {
+			return err
+		}
+
+		ag := &agent.MockSynthesizer{}
+		ingestor := cli.NewIngestor(ag, sys)
+
+		plan, err := ingestor.Ingest(cmd.Context(), url)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("\nProposed Build Plan:")
+		for _, step := range plan.Steps {
+			fmt.Printf("  - %s\n", step)
+		}
+		fmt.Printf("\nBinary target: %s\n", plan.Bin)
+		
+		fmt.Println("\nExecuting build...")
+		if err := ingestor.Build(cmd.Context(), plan, url); err != nil {
+			return err
+		}
+
+		reg, err := registry.Open(sys.GetIslandDir())
+		if err != nil {
+			return err
+		}
+		defer reg.Close()
+
+		err = reg.RegisterTool(registry.Tool{
+			Name:    plan.Bin,
+			Source:  url,
+			Version: "latest",
+			Type:    "source",
+		})
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("\nSuccessfully ingested %s!\n", plan.Bin)
 		return nil
 	},
 }
