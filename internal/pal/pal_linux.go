@@ -23,8 +23,8 @@ func (p *LinuxPAL) InjectPath() error {
 		return err
 	}
 
-	exportCmd := fmt.Sprintf("\nexport PATH=\"" + binDir + ":$PATH\"\n")
-	if strings.Contains(string(content), binDir) {
+	exportCmd := fmt.Sprintf("\nexport PATH=\"$HOME/.local/bin:$PATH\"\n")
+	if strings.Contains(string(content), ".local/bin") {
 		return nil // Already injected
 	}
 

@@ -33,6 +33,12 @@ mv anyislandd "$LOCAL_BIN/"
 echo "⚙️  Initializing Anyisland..."
 "$LOCAL_BIN/anyisland" init
 
+if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
+    echo "⚠️  Warning: $LOCAL_BIN is not in your PATH."
+    echo "👉 Add this to your shell config (.bashrc or .zshrc):"
+    echo "   export PATH=\"\$HOME/.local/bin:\$PATH\""
+fi
+
 echo ""
 echo "✅ Anyisland installation complete!"
 echo "🚀 The 'anyisland' and 'anyislandd' binaries are now in $LOCAL_BIN"

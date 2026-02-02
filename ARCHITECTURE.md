@@ -22,8 +22,8 @@ A module that interfaces with LLMs (local via Ollama or remote via Gemini/OpenAI
 
 3. Data Architecture
 Directory Structure
+~/.local/bin/           # User-local binaries (system PATH)
 ~/.anyisland/
-├── bin/                # Platform-specific binaries (added to PATH)
 ├── data/               # Git-synced configurations and YAML manifests
 ├── cache/              # Temporary source code clones and build artifacts
 ├── history/            # Encrypted and redacted shell history logs
