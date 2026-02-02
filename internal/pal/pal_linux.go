@@ -4,9 +4,6 @@ package pal
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 type LinuxPAL struct {

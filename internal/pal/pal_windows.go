@@ -24,6 +24,15 @@ func (p *WindowsPAL) InjectPath() error {
 	return cmd.Run()
 }
 
+func (p *WindowsPAL) EnsurePath() error {
+	binDir := p.GetBinDir()
+	if !verifyPathInSession(binDir) {
+		fmt.Printf("⚠️  Warning: %s is not in your current PATH.\n", binDir)
+		fmt.Println("👉 You may need to restart your terminal or computer for environment changes to take effect.")
+	}
+	return nil
+}
+
 func (p *WindowsPAL) SecretStore() SecretStore {
 	return &KeyringStore{}
 }
