@@ -24,6 +24,10 @@ func (p *WindowsPAL) InjectPath() error {
 	return cmd.Run()
 }
 
+func (p *WindowsPAL) SecretStore() SecretStore {
+	return &KeyringStore{}
+}
+
 func newSystem(islandDir string) System {
 	return &WindowsPAL{
 		BasePAL: BasePAL{

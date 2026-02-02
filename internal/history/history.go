@@ -9,17 +9,20 @@ import (
 
 	"github.com/nathfavour/anyisland/internal/agent"
 	"github.com/nathfavour/anyisland/internal/pal"
+	"github.com/nathfavour/anyisland/internal/crypto"
 )
 
 type HistoryManager struct {
-	sys   pal.System
-	agent agent.Synthesizer
+	sys    pal.System
+	agent  agent.Synthesizer
+	crypto *crypto.CryptoManager
 }
 
 func NewManager(sys pal.System, ag agent.Synthesizer) *HistoryManager {
 	return &HistoryManager{
-		sys:   sys,
-		agent: ag,
+		sys:    sys,
+		agent:  ag,
+		crypto: crypto.NewManager(sys),
 	}
 }
 
@@ -30,9 +33,14 @@ func (h *HistoryManager) SyncCommand(ctx context.Context, command string) error 
 		return fmt.Errorf("redaction failed: %w", err)
 	}
 
-	// 2. Encryption (Mock: prefix with [ENCRYPTED])
-	// In a real implementation, we would use AES-GCM or Age here.
-	encrypted := fmt.Sprintf("[ENCRYPTED:%s]", redacted)
+	// 2. Get Encryption Key (Keyring -> Passphrase)
+	key, err := h.crypto.GetEncryptionKey()
+	if err != nil {
+		return fmt.Errorf("failed to get encryption key: %w", err)
+	}
+
+	// 3. Encrypt
+	encrypted := h.crypto.Encrypt(redacted, key)
 
 	// 3. Store in data/history.log
 	historyPath := filepath.Join(h.sys.GetDataDir(), "history.log")

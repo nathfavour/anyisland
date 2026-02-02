@@ -41,6 +41,10 @@ func (p *DarwinPAL) InjectPath() error {
 	return nil
 }
 
+func (p *DarwinPAL) SecretStore() SecretStore {
+	return &KeyringStore{}
+}
+
 func newSystem(islandDir string) System {
 	return &DarwinPAL{
 		BasePAL: BasePAL{

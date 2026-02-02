@@ -5,6 +5,12 @@ import (
 	"path/filepath"
 )
 
+// SecretStore defines operations for platform keyring access.
+type SecretStore interface {
+	GetMasterKey() (string, error)
+	SetMasterKey(key string) error
+}
+
 // System defines the platform-specific operations required by Anyisland.
 type System interface {
 	InitFolders() error
@@ -13,7 +19,9 @@ type System interface {
 	GetDataDir() string
 	GetCacheDir() string
 	InjectPath() error
+	SecretStore() SecretStore
 }
+
 
 type BasePAL struct {
 	IslandDir string

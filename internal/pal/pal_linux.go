@@ -41,6 +41,10 @@ func (p *LinuxPAL) InjectPath() error {
 	return nil
 }
 
+func (p *LinuxPAL) SecretStore() SecretStore {
+	return &KeyringStore{}
+}
+
 func newSystem(islandDir string) System {
 	return &LinuxPAL{
 		BasePAL: BasePAL{
