@@ -12,6 +12,7 @@ type System interface {
 	GetBinDir() string
 	GetDataDir() string
 	GetCacheDir() string
+	InjectPath() error
 }
 
 type BasePAL struct {

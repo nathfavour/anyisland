@@ -2,8 +2,43 @@
 
 package pal
 
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
 type DarwinPAL struct {
 	BasePAL
+}
+
+func (p *DarwinPAL) InjectPath() error {
+	binDir := p.GetBinDir()
+	home, _ := os.UserHomeDir()
+	zshrc := filepath.Join(home, ".zshrc")
+
+	content, err := os.ReadFile(zshrc)
+	if err != nil {
+		return err
+	}
+
+	exportCmd := fmt.Sprintf("\nexport PATH=\"%s:$PATH\"\n", binDir)
+	if strings.Contains(string(content), binDir) {
+		return nil // Already injected
+	}
+
+	f, err := os.OpenFile(zshrc, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err := f.WriteString(exportCmd); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func newSystem(islandDir string) System {
