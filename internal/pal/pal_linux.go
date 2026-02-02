@@ -14,29 +14,15 @@ type LinuxPAL struct {
 }
 
 func (p *LinuxPAL) InjectPath() error {
-	home, _ := os.UserHomeDir()
-	bashrc := filepath.Join(home, ".bashrc")
+	return injectPathToConfig(p.GetBinDir())
+}
 
-	content, err := os.ReadFile(bashrc)
-	if err != nil {
-		return err
+func (p *LinuxPAL) EnsurePath() error {
+	binDir := p.GetBinDir()
+	if !verifyPathInSession(binDir) {
+		fmt.Printf("⚠️  Warning: %s is not in your current PATH.\n", binDir)
+		fmt.Println("👉 Please restart your shell or run: source <your-shell-rc-file>")
 	}
-
-	exportCmd := fmt.Sprintf("\nexport PATH=\"$HOME/.local/bin:$PATH\"\n")
-	if strings.Contains(string(content), ".local/bin") {
-		return nil // Already injected
-	}
-
-	f, err := os.OpenFile(bashrc, os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if _, err := f.WriteString(exportCmd); err != nil {
-		return err
-	}
-
 	return nil
 }
 

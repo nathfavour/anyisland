@@ -19,6 +19,7 @@ type System interface {
 	GetDataDir() string
 	GetCacheDir() string
 	InjectPath() error
+	EnsurePath() error
 	SecretStore() SecretStore
 }
 
