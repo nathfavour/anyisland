@@ -47,7 +47,13 @@ Anyisland captures shell history across sessions.
  * Plan Generation: AI returns a JSON "Build Plan" (e.g., go build -o anyisland).
  * Verification: User approves the AI-generated plan.
  * Provisioning: Anyisland executes the build/download, moves the binary to ~/.anyisland/bin, and registers it in island.db.
-5. Platform Abstraction Layer (PAL)
+6. Secure Secret Management
+Anyisland manages its master encryption key through a tiered approach:
+ * Platform Keyring (Tier 1): Attempts to use macOS Keychain, Windows Credential Manager, or Linux Secret Service (via dbus) to store the master key.
+ * User Passphrase (Tier 2): If no keyring is available or accessible, Anyisland prompts the user for a master passphrase.
+ * Encryption: All sensitive data (shell history, secrets.enc) is encrypted using AES-GCM (mocked as AES256 in prototype) derived from this master key.
+
+7. Platform Abstraction Layer (PAL)
 To remain platform-independent, Anyisland uses a System interface:
  * FileProvider: Handles symlinks and directory creation (ln -s vs. mklink).
  * EnvProvider: Handles persistent environment variable injection (.bashrc vs. setx).
