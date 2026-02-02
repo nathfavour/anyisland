@@ -6,6 +6,8 @@ import (
 
 	"os"
 
+	"strings"
+
 
 
 	"github.com/spf13/cobra"
@@ -17,6 +19,8 @@ import (
 	"github.com/nathfavour/anyisland/internal/cli"
 
 	"github.com/nathfavour/anyisland/internal/agent"
+
+	"github.com/nathfavour/anyisland/internal/history"
 
 )
 
@@ -56,7 +60,125 @@ func init() {
 
 	rootCmd.AddCommand(ingestCmd)
 
+	rootCmd.AddCommand(historyCmd)
+
+	historyCmd.AddCommand(historyRecordCmd)
+
+	historyCmd.AddCommand(historyShowCmd)
+
 }
+
+
+
+// ... (other commands)
+
+
+
+var historyCmd = &cobra.Command{
+
+	Use:   "history",
+
+	Short: "Manage E2EE shell history",
+
+}
+
+
+
+var historyRecordCmd = &cobra.Command{
+
+
+
+	Use:   "record [command]",
+
+
+
+	Short: "Record and sync a command",
+
+
+
+	Args:  cobra.MinimumNArgs(1),
+
+
+
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		sys, err := pal.New()
+
+		if err != nil {
+
+			return err
+
+		}
+
+		fullCmd := strings.Join(args, " ")
+
+		ag := &agent.MockSynthesizer{}
+
+		mgr := history.NewManager(sys, ag)
+
+
+
+		if err := mgr.SyncCommand(cmd.Context(), fullCmd); err != nil {
+
+			return err
+
+		}
+
+		fmt.Println("Command synced securely.")
+
+		return nil
+
+	},
+
+}
+
+
+
+var historyShowCmd = &cobra.Command{
+
+	Use:   "show",
+
+	Short: "Show synced history",
+
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		sys, err := pal.New()
+
+		if err != nil {
+
+			return err
+
+		}
+
+		ag := &agent.MockSynthesizer{}
+
+		mgr := history.NewManager(sys, ag)
+
+
+
+		lines, err := mgr.GetHistory()
+
+		if err != nil {
+
+			return err
+
+		}
+
+
+
+		for _, line := range lines {
+
+			fmt.Print(line)
+
+		}
+
+		return nil
+
+	},
+
+}
+
+
 
 
 

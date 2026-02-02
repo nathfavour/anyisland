@@ -18,26 +18,28 @@ A module that interfaces with LLMs (local via Ollama or remote via Gemini/OpenAI
  * Documentation Parser: Reads READMEs/Manifests to determine build steps for unknown repositories.
  * Platform Translator: Converts generic build instructions into platform-specific commands (e.g., mapping libssl to OpenSSL on Windows).
  * Update Summarizer: Generates human-readable changelogs from git commits.
+ * Privacy Firewall: Scans shell history for secrets (API keys, passwords, PII) and redacts them before synchronization.
+
 3. Data Architecture
 Directory Structure
 ~/.anyisland/
 ├── bin/                # Platform-specific binaries (added to PATH)
 ├── data/               # Git-synced configurations and YAML manifests
 ├── cache/              # Temporary source code clones and build artifacts
+├── history/            # Encrypted and redacted shell history logs
 ├── island.db           # Local registry of registered/discovered tools
 └── secrets.enc         # Encrypted environment variables (Age/SOPS)
 
-The Discovery Protocol (UDP)
-Tools register themselves by broadcasting a JSON packet:
-{
-  "op": "REGISTER",
-  "name": "project-name",
-  "source": "github.com/user/repo",
-  "version": "v1.0.0",
-  "type": "binary|source"
-}
+4. E2EE Shell History Sync
+Anyisland captures shell history across sessions.
+ * Capture: A shell hook sends commands to Anyisland.
+ * Redaction: The AI Synthesizer identifies sensitive data (e.g., export AWS_SECRET_ACCESS_KEY=...) and replaces it with placeholders.
+ * Encryption: Commands are encrypted using the master key in `secrets.enc`.
+ * Sync: Encrypted files are committed to the `data/` directory for Git-based synchronization.
+ * Recovery: Users can search history across machines, with sensitive data remaining redacted or locally decrypted.
 
-4. Execution Logic (The Ingestion Flow)
+5. Execution Logic (The Ingestion Flow)
+
  * Input: User provides a GitHub URL.
  * Inspection: Anyisland fetches the file tree.
    * Path A: If anyisland.yaml exists, follow explicit instructions.
