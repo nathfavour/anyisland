@@ -32,15 +32,27 @@ func (i *Ingestor) Build(ctx context.Context, plan *agent.BuildPlan, repoURL str
 	repoName := parts[len(parts)-1]
 	cloneDir := filepath.Join(i.sys.GetCacheDir(), repoName)
 
-	// 1. Clone
-	fmt.Printf("Cloning %s to %s...\n", repoURL, cloneDir)
+	// 1. Clone or Copy
+	fmt.Printf("Fetching %s...\n", repoURL)
 	if err := os.RemoveAll(cloneDir); err != nil {
 		return err
 	}
-	cmd := exec.CommandContext(ctx, "git", "clone", "https://"+repoURL, cloneDir)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("git clone failed: %w", err)
+
+	source := repoURL
+	if !strings.HasPrefix(source, "http") && !strings.HasPrefix(source, "git@") {
+		// Assume local if it doesn't look like a URL
+		if _, err := os.Stat(source); err == nil {
+			source, _ = filepath.Abs(source)
+		} else {
+			source = "https://" + source
+		}
 	}
+
+	cmd := exec.CommandContext(ctx, "git", "clone", source, cloneDir)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("git clone failed from %s: %w", source, err)
+	}
+
 
 	// 2. Execute build steps
 	for _, step := range plan.Steps {
