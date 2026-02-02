@@ -2,6 +2,12 @@
 
 AI-powered, platform-agnostic, and decentralized package manager.
 
+## Installation
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install.sh | bash
+```
+
 ## Quick Start
 
 ### 1. Initialize
