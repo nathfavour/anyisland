@@ -32,6 +32,7 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(ingestCmd)
 	rootCmd.AddCommand(historyCmd)
+	rootCmd.AddCommand(updateCmd)
 	historyCmd.AddCommand(historyRecordCmd)
 	historyCmd.AddCommand(historyShowCmd)
 }
@@ -150,53 +151,100 @@ tools, err := reg.ListTools()
 	},
 }
 
-var ingestCmd = &cobra.Command{
-	Use:   "ingest [url]",
-	Short: "Ingest a tool from a GitHub URL",
-	Args:  cobra.ExactArgs(1),
+var updateCmd = &cobra.Command{
+
+	Use:   "update",
+
+	Short: "Update Anyisland itself",
+
 	RunE: func(cmd *cobra.Command, args []string) error {
-		url := args[0]
+
 		sys, err := pal.New()
+
 		if err != nil {
+
 			return err
+
 		}
 
-		ag := &agent.MockSynthesizer{}
-		ingestor := cli.NewIngestor(ag, sys)
 
-		plan, err := ingestor.Ingest(cmd.Context(), url)
-		if err != nil {
-			return err
-		}
-
-		fmt.Println("\nProposed Build Plan:")
-		for _, step := range plan.Steps {
-			fmt.Printf("  - %s\n", step)
-		}
-		fmt.Printf("\nBinary target: %s\n", plan.Bin)
-		
-		fmt.Println("\nExecuting build...")
-		if err := ingestor.Build(cmd.Context(), plan, url); err != nil {
-			return err
-		}
 
 		reg, err := registry.Open(sys.GetIslandDir())
+
 		if err != nil {
+
 			return err
+
 		}
+
 		defer reg.Close()
 
-		err = reg.RegisterTool(registry.Tool{
-			Name:    plan.Bin,
-			Source:  url,
-			Version: "latest",
-			Type:    "source",
-		})
+
+
+		tools, err := reg.ListTools()
+
 		if err != nil {
+
 			return err
+
 		}
 
-		fmt.Printf("\nSuccessfully ingested %s!\n", plan.Bin)
+
+
+		var self *registry.Tool
+
+		for _, t := range tools {
+
+			if t.Name == "anyisland" {
+
+				self = &t
+
+				break
+
+			}
+
+		}
+
+
+
+		if self == nil {
+
+			return fmt.Errorf("anyisland not found in registry; please run 'anyisland ingest github.com/nathfavour/anyisland' first")
+
+		}
+
+
+
+		fmt.Printf("Updating Anyisland from %s...\n", self.Source)
+
+		ag := &agent.MockSynthesizer{}
+
+		ingestor := cli.NewIngestor(ag, sys)
+
+
+
+		plan, err := ingestor.Ingest(cmd.Context(), self.Source)
+
+		if err != nil {
+
+			return err
+
+		}
+
+
+
+		if err := ingestor.Build(cmd.Context(), plan, self.Source); err != nil {
+
+			return err
+
+		}
+
+
+
+		fmt.Println("\nAnyisland updated successfully!")
+
 		return nil
+
 	},
+
 }
