@@ -32,7 +32,8 @@ func (p *BasePAL) GetIslandDir() string {
 }
 
 func (p *BasePAL) GetBinDir() string {
-	return filepath.Join(p.IslandDir, "bin")
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".local", "bin")
 }
 
 func (p *BasePAL) GetDataDir() string {
