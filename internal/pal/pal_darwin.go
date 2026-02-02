@@ -14,7 +14,6 @@ type DarwinPAL struct {
 }
 
 func (p *DarwinPAL) InjectPath() error {
-	binDir := p.GetBinDir()
 	home, _ := os.UserHomeDir()
 	zshrc := filepath.Join(home, ".zshrc")
 

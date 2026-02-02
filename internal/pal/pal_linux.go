@@ -14,7 +14,6 @@ type LinuxPAL struct {
 }
 
 func (p *LinuxPAL) InjectPath() error {
-	binDir := p.GetBinDir()
 	home, _ := os.UserHomeDir()
 	bashrc := filepath.Join(home, ".bashrc")
 
