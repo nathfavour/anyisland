@@ -28,9 +28,13 @@ func NewIngestor(ag agent.Synthesizer, sys pal.System) *Ingestor {
 }
 
 func (i *Ingestor) Build(ctx context.Context, plan *agent.BuildPlan, repoURL string) error {
-	parts := strings.Split(strings.TrimPrefix(repoURL, "https://"), "/")
-	repoName := parts[len(parts)-1]
+	absSource, _ := filepath.Abs(repoURL)
+	repoName := filepath.Base(absSource)
+	if repoName == "." || repoName == "/" {
+		repoName = "anyisland-local"
+	}
 	cloneDir := filepath.Join(i.sys.GetCacheDir(), repoName)
+
 
 	// 1. Clone or Copy
 	fmt.Printf("Fetching %s...\n", repoURL)
@@ -86,39 +90,67 @@ func (i *Ingestor) Build(ctx context.Context, plan *agent.BuildPlan, repoURL str
 
 
 func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*agent.BuildPlan, error) {
-	// Simple parsing of "github.com/user/repo"
-	parts := strings.Split(strings.TrimPrefix(repoURL, "https://"), "/")
-	if len(parts) < 3 {
-		return nil, fmt.Errorf("invalid github URL: %s", repoURL)
-	}
-	owner := parts[1]
-	repo := parts[2]
+	var owner, repo string
+	var files []string
+	var readmeContent string
 
-	fmt.Printf("Fetching repository info for %s/%s...\n", owner, repo)
-
-	// Fetch file tree (simplified)
-	tree, _, err := i.gh.Git.GetTree(ctx, owner, repo, "main", true)
-	if err != nil {
-		// Try master if main fails
-		tree, _, err = i.gh.Git.GetTree(ctx, owner, repo, "master", true)
+	if _, err := os.Stat(repoURL); err == nil {
+		// Local path
+		fmt.Printf("Analyzing local repository %s...\n", repoURL)
+		absPath, _ := filepath.Abs(repoURL)
+		repo = filepath.Base(absPath)
+		err := filepath.Walk(absPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() && info.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			rel, _ := filepath.Rel(absPath, path)
+			files = append(files, rel)
+			if strings.ToLower(info.Name()) == "readme.md" {
+				content, _ := os.ReadFile(path)
+				readmeContent = string(content)
+			}
+			return nil
+		})
 		if err != nil {
 			return nil, err
 		}
-	}
+	} else {
+		// Remote GitHub URL
+		parts := strings.Split(strings.TrimPrefix(repoURL, "https://"), "/")
+		if len(parts) < 3 {
+			return nil, fmt.Errorf("invalid github URL: %s", repoURL)
+		}
+		owner = parts[1]
+		repo = parts[2]
 
-	var files []string
-	for _, entry := range tree.Entries {
-		files = append(files, entry.GetPath())
-	}
+		fmt.Printf("Fetching repository info for %s/%s...\n", owner, repo)
 
-	// Fetch README
-	readme, _, err := i.gh.Repositories.GetReadme(ctx, owner, repo, nil)
-	readmeContent := ""
-	if err == nil {
-		content, _ := readme.GetContent()
-		readmeContent = content
+		// Fetch file tree (simplified)
+		tree, _, err := i.gh.Git.GetTree(ctx, owner, repo, "main", true)
+		if err != nil {
+			// Try master if main fails
+			tree, _, err = i.gh.Git.GetTree(ctx, owner, repo, "master", true)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		for _, entry := range tree.Entries {
+			files = append(files, entry.GetPath())
+		}
+
+		// Fetch README
+		readme, _, err := i.gh.Repositories.GetReadme(ctx, owner, repo, nil)
+		if err == nil {
+			content, _ := readme.GetContent()
+			readmeContent = content
+		}
 	}
 
 	fmt.Println("Generating build plan via AI...")
 	return i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
 }
+
