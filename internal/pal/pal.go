@@ -18,6 +18,7 @@ type System interface {
 	GetBinDir() string
 	GetDataDir() string
 	GetCacheDir() string
+	GetSourceDir() string
 	InjectPath() error
 	EnsurePath() error
 	SecretStore() SecretStore
@@ -45,11 +46,16 @@ func (p *BasePAL) GetCacheDir() string {
 	return filepath.Join(p.IslandDir, "cache")
 }
 
+func (p *BasePAL) GetSourceDir() string {
+	return filepath.Join(p.IslandDir, "source")
+}
+
 func (p *BasePAL) InitFolders() error {
 	dirs := []string{
 		p.GetBinDir(),
 		p.GetDataDir(),
 		p.GetCacheDir(),
+		p.GetSourceDir(),
 	}
 
 	for _, dir := range dirs {
