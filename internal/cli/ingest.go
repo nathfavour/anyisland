@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -90,6 +91,7 @@ func (i *Ingestor) Build(ctx context.Context, plan *agent.BuildPlan, repoURL str
 
 
 func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*agent.BuildPlan, error) {
+	repoURL = normalizeRepoURL(repoURL)
 	var owner, repo string
 	var files []string
 	var readmeContent string
@@ -98,6 +100,17 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*agent.BuildPlan
 		// Local path
 		fmt.Printf("Analyzing local repository %s...\n", repoURL)
 		absPath, _ := filepath.Abs(repoURL)
+		
+		manifestPath := filepath.Join(absPath, "anyisland.json")
+		if _, err := os.Stat(manifestPath); err == nil {
+			fmt.Println("Found anyisland.json, using provided build plan.")
+			m, err := LoadManifest(manifestPath)
+			if err == nil {
+				return &m.Build, nil
+			}
+			fmt.Printf("Warning: failed to parse anyisland.json: %v\n", err)
+		}
+
 		repo = filepath.Base(absPath)
 		err := filepath.Walk(absPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -119,14 +132,25 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*agent.BuildPlan
 		}
 	} else {
 		// Remote GitHub URL
-		parts := strings.Split(strings.TrimPrefix(repoURL, "https://"), "/")
-		if len(parts) < 3 {
+		parts := strings.Split(strings.TrimPrefix(repoURL, "https://github.com/"), "/")
+		if len(parts) < 2 {
 			return nil, fmt.Errorf("invalid github URL: %s", repoURL)
 		}
-		owner = parts[1]
-		repo = parts[2]
+		owner = parts[0]
+		repo = parts[1]
 
 		fmt.Printf("Fetching repository info for %s/%s...\n", owner, repo)
+
+		// Try to fetch anyisland.json first
+		fileContent, _, _, err := i.gh.Repositories.GetContents(ctx, owner, repo, "anyisland.json", nil)
+		if err == nil {
+			content, _ := fileContent.GetContent()
+			var m Manifest
+			if err := json.Unmarshal([]byte(content), &m); err == nil {
+				fmt.Println("Found anyisland.json, using provided build plan.")
+				return &m.Build, nil
+			}
+		}
 
 		// Fetch file tree (simplified)
 		tree, _, err := i.gh.Git.GetTree(ctx, owner, repo, "main", true)
@@ -152,5 +176,19 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*agent.BuildPlan
 
 	fmt.Println("Generating build plan via AI...")
 	return i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
+}
+
+func normalizeRepoURL(url string) string {
+	if !strings.HasPrefix(url, "http") && !strings.HasPrefix(url, "git@") {
+		if _, err := os.Stat(url); err == nil {
+			abs, _ := filepath.Abs(url)
+			return abs
+		}
+		if strings.Count(url, "/") == 1 {
+			return "https://github.com/" + url
+		}
+		return "https://" + url
+	}
+	return url
 }
 

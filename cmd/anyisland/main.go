@@ -20,8 +20,8 @@ var (
 		Short: "Anyisland is an AI-powered package manager",
 		Long:  `Anyisland is an AI-powered, platform-agnostic, and decentralized package manager.`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			// Skip check for init command as it sets up the path
-			if cmd.Name() == "init" {
+			// Skip check for setup and init command
+			if cmd.Name() == "setup" || cmd.Name() == "init" {
 				return nil
 			}
 			sys, err := pal.New()
@@ -81,8 +81,8 @@ var (
 		},
 	}
 
-	initCmd = &cobra.Command{
-		Use:   "init",
+	setupCmd = &cobra.Command{
+		Use:   "setup",
 		Short: "Initialize Anyisland environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			sys, err := pal.New()
@@ -109,6 +109,69 @@ var (
 			}
 			fmt.Printf("Anyisland initialized at %s\n", sys.GetIslandDir())
 			fmt.Println("Please restart your shell or source your rc file to update PATH.")
+			return nil
+		},
+	}
+
+	initCmd = &cobra.Command{
+		Use:   "init",
+		Short: "Initialize a project with anyisland.json",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := cli.InitProject("."); err != nil {
+				return err
+			}
+			fmt.Println("anyisland.json created.")
+			return nil
+		},
+	}
+
+	installCmd = &cobra.Command{
+		Use:   "install [url]",
+		Short: "Install a tool from a GitHub URL or local path",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			url := args[0]
+			sys, err := pal.New()
+			if err != nil {
+				return err
+			}
+
+			ag := &agent.MockSynthesizer{}
+			ingestor := cli.NewIngestor(ag, sys)
+
+			plan, err := ingestor.Ingest(cmd.Context(), url)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("\nProposed Build Plan:")
+			for _, step := range plan.Steps {
+				fmt.Printf("  - %s\n", step)
+			}
+			fmt.Printf("\nBinary target: %s\n", plan.Bin)
+			
+			fmt.Println("\nExecuting build...")
+			if err := ingestor.Build(cmd.Context(), plan, url); err != nil {
+				return err
+			}
+
+			reg, err := registry.Open(sys.GetIslandDir())
+			if err != nil {
+				return err
+			}
+			defer reg.Close()
+
+			err = reg.RegisterTool(registry.Tool{
+				Name:    plan.Bin,
+				Source:  url,
+				Version: "latest",
+				Type:    "source",
+			})
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("\nSuccessfully installed %s!\n", plan.Bin)
 			return nil
 		},
 	}
@@ -255,11 +318,23 @@ func main() {
 }
 
 func init() {
+
+	rootCmd.AddCommand(setupCmd)
+
 	rootCmd.AddCommand(initCmd)
+
 	rootCmd.AddCommand(listCmd)
+
+	rootCmd.AddCommand(installCmd)
+
 	rootCmd.AddCommand(ingestCmd)
+
 	rootCmd.AddCommand(historyCmd)
+
 	rootCmd.AddCommand(updateCmd)
+
 	historyCmd.AddCommand(historyRecordCmd)
+
 	historyCmd.AddCommand(historyShowCmd)
+
 }

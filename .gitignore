@@ -1,0 +1,16 @@
+# Binaries
+anyisland
+anyisland-local
+test-project/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+pkg/
+
+# OS
+.DS_Store
