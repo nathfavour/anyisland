@@ -77,6 +77,16 @@ func (i *Ingestor) Build(ctx context.Context, plan *agent.BuildPlan, repoURL str
 	dstBin := filepath.Join(i.sys.GetBinDir(), plan.Bin)
 	fmt.Printf("Installing %s to %s...\n", srcBin, dstBin)
 	
+	// Handle "text file busy" by renaming existing binary first
+	if _, err := os.Stat(dstBin); err == nil {
+		oldBin := dstBin + ".old"
+		_ = os.Remove(oldBin) // Clean up any previous old binary
+		if err := os.Rename(dstBin, oldBin); err != nil {
+			return fmt.Errorf("failed to move existing binary: %w", err)
+		}
+		defer os.Remove(oldBin) // Try to clean up after successful installation
+	}
+
 	// Copy file (more robust than Move across filesystems)
 	input, err := os.ReadFile(srcBin)
 	if err != nil {
