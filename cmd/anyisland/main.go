@@ -150,39 +150,70 @@ var (
 			ag := getSynthesizer()
 			ingestor := cli.NewIngestor(ag, sys)
 
-			plan, err := ingestor.Ingest(cmd.Context(), url)
-			if err != nil {
-				return err
-			}
+			                        manifest, err := ingestor.Ingest(cmd.Context(), url)
 
-			fmt.Println("\nProposed Build Plan:")
-			for _, step := range plan.Steps {
-				fmt.Printf("  - %s\n", step)
-			}
-			fmt.Printf("\nBinary target: %s\n", plan.Bin)
+			                        if err != nil {
+
+			                                return err
+
+			                        }
+
 			
-			fmt.Println("\nExecuting build...")
-			if err := ingestor.Build(cmd.Context(), plan, url); err != nil {
-				return err
-			}
 
-			reg, err := registry.Open(sys.GetIslandDir())
+			                        fmt.Println("\nProposed Build Plan:")
+
+			                        for _, step := range manifest.Build.Steps {
+
+			                                fmt.Printf("  - %s\n", step)
+
+			                        }
+
+			                        fmt.Printf("\nBinary target: %s\n", manifest.Build.Bin)
+
+			
+
+			                        fmt.Println("\nExecuting build...")
+
+			                        if err := ingestor.Build(cmd.Context(), manifest, url); err != nil {
+
+			                                return err
+
+			                        }
+
+			
+
+			                        reg, err := registry.Open(sys.GetIslandDir())
+
+			                        if err != nil {
+
+			                                return err
+
+			                        }
+
+			                        defer reg.Close()
+
+			
+
+			                        err = reg.RegisterTool(registry.Tool{
+
+			                                Name:    manifest.Build.Bin,
+
+			                                Source:  url,
+
+			                                Version: manifest.Version,
+
+			                                Type:    "source",
+
+			                        })
+
+			
 			if err != nil {
 				return err
 			}
-			defer reg.Close()
 
-			err = reg.RegisterTool(registry.Tool{
-				Name:    plan.Bin,
-				Source:  url,
-				Version: "latest",
-				Type:    "source",
-			})
-			if err != nil {
-				return err
-			}
+			                        fmt.Printf("\nSuccessfully installed %s!\n", manifest.Build.Bin)
 
-			fmt.Printf("\nSuccessfully installed %s!\n", plan.Bin)
+			
 			return nil
 		},
 	}
@@ -242,39 +273,70 @@ var (
 			ag := getSynthesizer()
 			ingestor := cli.NewIngestor(ag, sys)
 
-			plan, err := ingestor.Ingest(cmd.Context(), url)
-			if err != nil {
-				return err
-			}
+			                        manifest, err := ingestor.Ingest(cmd.Context(), url)
 
-			fmt.Println("\nProposed Build Plan:")
-			for _, step := range plan.Steps {
-				fmt.Printf("  - %s\n", step)
-			}
-			fmt.Printf("\nBinary target: %s\n", plan.Bin)
+			                        if err != nil {
+
+			                                return err
+
+			                        }
+
 			
-			fmt.Println("\nExecuting build...")
-			if err := ingestor.Build(cmd.Context(), plan, url); err != nil {
-				return err
-			}
 
-			reg, err := registry.Open(sys.GetIslandDir())
+			                        fmt.Println("\nProposed Build Plan:")
+
+			                        for _, step := range manifest.Build.Steps {
+
+			                                fmt.Printf("  - %s\n", step)
+
+			                        }
+
+			                        fmt.Printf("\nBinary target: %s\n", manifest.Build.Bin)
+
+			
+
+			                        fmt.Println("\nExecuting build...")
+
+			                        if err := ingestor.Build(cmd.Context(), manifest, url); err != nil {
+
+			                                return err
+
+			                        }
+
+			
+
+			                        reg, err := registry.Open(sys.GetIslandDir())
+
+			                        if err != nil {
+
+			                                return err
+
+			                        }
+
+			                        defer reg.Close()
+
+			
+
+			                        err = reg.RegisterTool(registry.Tool{
+
+			                                Name:    manifest.Build.Bin,
+
+			                                Source:  url,
+
+			                                Version: manifest.Version,
+
+			                                Type:    "source",
+
+			                        })
+
+			
 			if err != nil {
 				return err
 			}
-			defer reg.Close()
 
-			err = reg.RegisterTool(registry.Tool{
-				Name:    plan.Bin,
-				Source:  url,
-				Version: "latest",
-				Type:    "source",
-			})
-			if err != nil {
-				return err
-			}
+			                        fmt.Printf("\nSuccessfully ingested %s!\n", manifest.Build.Bin)
 
-			fmt.Printf("\nSuccessfully ingested %s!\n", plan.Bin)
+			
 			return nil
 		},
 	}
@@ -334,16 +396,27 @@ var (
 				}
 				fmt.Printf("Updating %s from %s...\n", t.Name, source)
 				
-				plan, err := ingestor.Ingest(cmd.Context(), source)
-				if err != nil {
-					fmt.Printf("Error ingesting %s: %v\n", t.Name, err)
-					continue
-				}
-
-				if err := ingestor.Build(cmd.Context(), plan, source); err != nil {
-					fmt.Printf("Error building %s: %v\n", t.Name, err)
-					continue
-				}
+				                                manifest, err := ingestor.Ingest(cmd.Context(), source)
+				
+				                                if err != nil {
+				
+				                                      fmt.Printf("Error ingesting %s: %v\n", t.Name, err)
+				
+				                                      continue
+				
+				                                }
+				
+				
+				
+				                                if err := ingestor.Build(cmd.Context(), manifest, source); err != nil {
+				
+				                                      fmt.Printf("Error building %s: %v\n", t.Name, err)
+				
+				                                      continue
+				
+				                                }
+				
+				
 				fmt.Printf("%s updated successfully!\n", t.Name)
 			}
 

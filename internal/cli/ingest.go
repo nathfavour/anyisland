@@ -28,7 +28,7 @@ func NewIngestor(ag agent.Synthesizer, sys pal.System) *Ingestor {
 	}
 }
 
-func (i *Ingestor) Build(ctx context.Context, plan *agent.BuildPlan, repoURL string) error {
+func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error {
 	repoURL = normalizeRepoURL(repoURL)
 	var workDir string
 
@@ -73,7 +73,18 @@ func (i *Ingestor) Build(ctx context.Context, plan *agent.BuildPlan, repoURL str
 		}
 	}
 
+	// 1.5 Craft anyisland.json if missing
+	manifestPath := filepath.Join(workDir, "anyisland.json")
+	if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
+		fmt.Println("Crafting anyisland.json for this tool...")
+		data, err := json.MarshalIndent(m, "", "  ")
+		if err == nil {
+			_ = os.WriteFile(manifestPath, data, 0644)
+		}
+	}
+
 	// 2. Execute build steps
+	plan := m.Build
 	for _, step := range plan.Steps {
 		fmt.Printf("Executing: %s\n", step)
 		args := strings.Fields(step)
@@ -120,7 +131,7 @@ func (i *Ingestor) Build(ctx context.Context, plan *agent.BuildPlan, repoURL str
 }
 
 
-func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*agent.BuildPlan, error) {
+func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, error) {
 	repoURL = normalizeRepoURL(repoURL)
 	var owner, repo string
 	var files []string
@@ -136,7 +147,7 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*agent.BuildPlan
 			fmt.Println("Found anyisland.json, using provided build plan.")
 			m, err := LoadManifest(manifestPath)
 			if err == nil {
-				return &m.Build, nil
+				return m, nil
 			}
 			fmt.Printf("Warning: failed to parse anyisland.json: %v\n", err)
 		}
@@ -171,41 +182,63 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*agent.BuildPlan
 
 		fmt.Printf("Fetching repository info for %s/%s...\n", owner, repo)
 
-		// Try to fetch anyisland.json first
-		fileContent, _, _, err := i.gh.Repositories.GetContents(ctx, owner, repo, "anyisland.json", nil)
+		// 1. Detect default branch via GitHub API
+		ghRepo, _, err := i.gh.Repositories.Get(ctx, owner, repo)
+		defaultBranch := "main"
 		if err == nil {
-			content, _ := fileContent.GetContent()
+			defaultBranch = ghRepo.GetDefaultBranch()
+		}
+
+		// 2. Try to fetch anyisland.json via raw.githubusercontent.com (using curl)
+		rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/anyisland.json", owner, repo, defaultBranch)
+		fmt.Printf("Attempting to fetch manifest from %s\n", rawURL)
+		
+		curlCmd := exec.CommandContext(ctx, "curl", "-fsSL", rawURL)
+		output, err := curlCmd.Output()
+		if err == nil {
 			var m Manifest
-			if err := json.Unmarshal([]byte(content), &m); err == nil {
-				fmt.Println("Found anyisland.json, using provided build plan.")
-				return &m.Build, nil
+			if err := json.Unmarshal(output, &m); err == nil {
+				fmt.Println("Found anyisland.json via raw GitHub, using provided build plan.")
+				return &m, nil
 			}
 		}
 
 		// Fetch file tree (simplified)
-		tree, _, err := i.gh.Git.GetTree(ctx, owner, repo, "main", true)
+		tree, _, err := i.gh.Git.GetTree(ctx, owner, repo, defaultBranch, true)
 		if err != nil {
-			// Try master if main fails
-			tree, _, err = i.gh.Git.GetTree(ctx, owner, repo, "master", true)
-			if err != nil {
-				return nil, err
-			}
+			return nil, err
 		}
 
 		for _, entry := range tree.Entries {
 			files = append(files, entry.GetPath())
 		}
 
-		// Fetch README
-		readme, _, err := i.gh.Repositories.GetReadme(ctx, owner, repo, nil)
+		// Fetch README via curl if possible, otherwise API
+		readmeURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/README.md", owner, repo, defaultBranch)
+		curlReadme := exec.CommandContext(ctx, "curl", "-fsSL", readmeURL)
+		readmeOutput, err := curlReadme.Output()
 		if err == nil {
-			content, _ := readme.GetContent()
-			readmeContent = content
+			readmeContent = string(readmeOutput)
+		} else {
+			readme, _, err := i.gh.Repositories.GetReadme(ctx, owner, repo, nil)
+			if err == nil {
+				content, _ := readme.GetContent()
+				readmeContent = content
+			}
 		}
 	}
 
 	fmt.Println("Generating build plan via AI...")
-	return i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
+	plan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Manifest{
+		Name:    repo,
+		Version: "latest",
+		Build:   *plan,
+	}, nil
 }
 
 func normalizeRepoURL(url string) string {
