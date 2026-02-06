@@ -23,5 +23,4 @@ Official packages are stored in the `packages/official` directory. To add a new 
 ## Development
 
 - **CLI:** `cmd/anyisland`
-- **Daemon:** `cmd/anyislandd`
 - **Internal Logic:** `internal/`

@@ -21,7 +21,7 @@ anyisland uninstall
 ```
 
 ### Standard Uninstallation
-1.  **Binary Removal:** Deletes `anyisland` and `anyislandd` from `~/.local/bin/`.
+1.  **Binary Removal:** Deletes `anyisland` and `anyisland daemon` from `~/.local/bin/`.
 2.  **Shell Cleanup:** Removes the `# >>> anyisland initialize >>>` blocks from your shell profiles.
 3.  **Data Preservation:** Keeps `~/.anyisland` (configs, registry, history) intact so you can reinstall without losing data.
 

@@ -42,7 +42,7 @@ See the [**Manifest Specification**](./manifest-spec.md) for a detailed breakdow
 Tools can integrate with the Anyisland ecosystem to enable features like auto-discovery and state management.
 
 ### Auto-Registration
-A tool can register itself with the local Anyisland daemon (`anyislandd`) by sending a UDP packet to port `1995`.
+A tool can register itself with the local Anyisland daemon (`anyisland daemon`) by sending a UDP packet to port `1995`.
 
 **Example (Go):**
 ```go

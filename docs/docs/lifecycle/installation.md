@@ -21,7 +21,7 @@ The script downloads the specific binary and executes it with the `self-install`
 When Anyisland runs its installation routine, it performs the following:
 
 *   **Folder Structure:** Creates `~/.anyisland` and its subdirectories (`bin`, `data`, `cache`, `source`).
-*   **Self-Migration:** Copies the `anyisland` and `anyislandd` binaries to `~/.local/bin/`.
+*   **Self-Migration:** Copies the `anyisland` and `anyisland daemon` binaries to `~/.local/bin/`.
 *   **Shell Injection:** Detects the active shell (Bash, Zsh, or Fish) and adds `~/.local/bin` to the `PATH` using idempotent markers:
 
 ```bash

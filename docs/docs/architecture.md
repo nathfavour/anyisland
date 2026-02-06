@@ -15,7 +15,7 @@ The primary entry point for users. It is a stateless binary that orchestrates hi
 - **Registry Interaction:** Communicates with the local SQLite registry to track installed tools.
 - **History Recording:** Provides hooks for shell history capture and redaction.
 
-### 2. The Island Daemon (`anyislandd`)
+### 2. The Island Daemon (`anyisland daemon`)
 A long-running background process that manages the "state" of the Island:
 - **Discovery (UDP :1995):** Listens for "Anyisland-aware" tools that announce themselves via a lightweight UDP heartbeat.
 - **Background Updates:** Periodically checks for tool updates and manages background builds.

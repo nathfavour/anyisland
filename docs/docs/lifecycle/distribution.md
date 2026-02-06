@@ -1,6 +1,6 @@
 # Distribution & Integrity
 
-Anyisland is distributed as a set of statically-linked Go binaries (`anyisland` and `anyislandd`), ensuring maximum portability across environments.
+Anyisland is distributed as a set of statically-linked Go binaries (`anyisland` and `anyisland daemon`), ensuring maximum portability across environments.
 
 ## CI/CD Pipeline
 
@@ -28,4 +28,4 @@ Anyisland uses a multi-layered discovery process to identify updates:
 
 1.  **Registry Discovery:** Queries the decentralized Anyisland registry (or fallback GitHub repository) for the latest release metadata.
 2.  **Commit Tracking:** Compares the embedded `Commit` hash of the running binary with the remote target to identify "Stable-Edge" updates that may not have a new semantic version.
-3.  **Background Polling:** The `anyislandd` daemon periodically checks for updates in the background and notifies the user via the CLI.
+3.  **Background Polling:** The `anyisland daemon` daemon periodically checks for updates in the background and notifies the user via the CLI.

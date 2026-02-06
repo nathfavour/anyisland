@@ -58,10 +58,10 @@ The `anyisland.json` file is the primary configuration for Anyisland-aware tools
 
 ## Anyisland Pulse (OTA)
 
-"The Pulse" is a low-energy OTA communication channel between `anyislandd` and installed tools. 
+"The Pulse" is a low-energy OTA communication channel between `anyisland daemon` and installed tools. 
 
 ### How it Works
-1. **Centralized Polling**: `anyislandd` fetches update metadata for all registered tools in the background.
+1. **Centralized Polling**: `anyisland daemon` fetches update metadata for all registered tools in the background.
 2. **Local IPC**: Tools can query the local Unix Domain Socket at `~/.anyisland/anyisland.sock` to check for updates without touching the network.
 3. **Push Notifications**: Tools with `pulse: true` can subscribe to the socket to receive immediate push notifications when an update is available.
 

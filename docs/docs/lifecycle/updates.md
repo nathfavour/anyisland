@@ -21,7 +21,7 @@ When `anyisland update` is executed:
 
 ## Daemon Hot-Swapping
 
-The `anyislandd` daemon supports hot-swapping to ensure continuous background operations:
+The `anyisland daemon` daemon supports hot-swapping to ensure continuous background operations:
 
 1.  **State Save:** The daemon serializes its current registry state and active tasks.
 2.  **Exec:** It uses `syscall.Exec` to replace its process image with the new version.

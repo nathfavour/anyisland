@@ -21,7 +21,7 @@ All lifecycle events are appended to a JSONL file:
 
 ## AI Agent Integration
 
-The `anyisland` CLI and `anyislandd` daemon provide these logs to the AI Synthesizer. This allows the AI to:
+The `anyisland` CLI and `anyisland daemon` daemon provide these logs to the AI Synthesizer. This allows the AI to:
 *   Identify recurring update failures.
 *   Suggest rollbacks if a specific version is known to be buggy.
 *   Automate recovery steps during self-healing.
