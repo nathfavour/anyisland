@@ -32,6 +32,6 @@ func VersionString() string {
 	if Commit == "none" && commit != "none" {
 		commit += " (local)"
 	}
-	return fmt.Sprintf("anyisland %s\nCommit: %s\nBuilt: %s\nPlatform: %s/%s\nCompiler: %s", 
-		Version, commit, BuildTime, runtime.GOOS, runtime.GOARCH, GoVersion)
+	return fmt.Sprintf("anyisland\nCommit: %s\nPlatform: %s/%s\nCompiler: %s", 
+		commit, runtime.GOOS, runtime.GOARCH, GoVersion)
 }

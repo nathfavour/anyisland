@@ -757,23 +757,35 @@ var (
 
 	                        
 
-	                                                                        fmt.Println("🏝️ Anyisland - Detailed Version Information")
+	                                                                                                                        fmt.Println("🏝️ Anyisland - Detailed Version Information")
 
-	                                                                        fmt.Println("─────────────────────────────────────────────")
+	                        
 
-	                                                                        fmt.Printf("Version:    %s\n", cli.Version)
+	                                                                                                                        fmt.Println("─────────────────────────────────────────────")
 
-	                                                                        fmt.Printf("Commit:     %s\n", commit)
+	                        
 
-	                                                                        fmt.Printf("Built:      %s\n", cli.BuildTime)
+	                                                                                                                        fmt.Printf("Commit:     %s\n", commit)
 
-	                                                                        fmt.Printf("Platform:   %s/%s\n", runtime.GOOS, runtime.GOARCH)
+	                        
 
-	                                                                        fmt.Printf("Compiler:   %s\n", runtime.Version())
+	                                                                                                                        fmt.Printf("Platform:   %s/%s\n", runtime.GOOS, runtime.GOARCH)
 
-	                                                                },
+	                        
 
-	                                                        }
+	                                                                                                                        fmt.Printf("Compiler:   %s\n", runtime.Version())
+
+	                        
+
+	                                                                                                                },
+
+	                        
+
+	                                                                                                        }
+
+	                        
+
+	                                                                        
 
 	                        
 	        	        selfInstallCmd = &cobra.Command{

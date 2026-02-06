@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/google/go-github/v60/github"
 	"github.com/nathfavour/anyisland/internal/agent"
@@ -160,8 +159,7 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 			if commit == "" {
 				commit = "unknown"
 			}
-			buildTime := time.Now().UTC().Format(time.RFC3339)
-			ldflags := fmt.Sprintf("-X github.com/nathfavour/anyisland/internal/cli.Version=%s -X github.com/nathfavour/anyisland/internal/cli.Commit=%s -X github.com/nathfavour/anyisland/internal/cli.BuildTime=%s", m.Version, commit, buildTime)
+			ldflags := fmt.Sprintf("-X github.com/nathfavour/anyisland/internal/cli.Commit=%s", commit)
 
 			// Insert ldflags right after 'build' or 'install'
 			newArgs := []string{args[0], args[1], "-ldflags", ldflags}
