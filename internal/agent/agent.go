@@ -9,6 +9,7 @@ type BuildPlan struct {
 	Steps      []string `json:"steps"`
 	Bin        string   `json:"bin"`
 	InstallDir string   `json:"install_dir,omitempty"` // Preferred binary path location
+	Toolchain  string   `json:"toolchain,omitempty"`   // e.g., "go", "rust", "node"
 }
 
 type Synthesizer interface {

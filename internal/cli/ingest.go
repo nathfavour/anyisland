@@ -148,9 +148,29 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 		}
 	}
 
-	// 2. Execute build steps
-	plan := m.Build
-	for _, step := range plan.Steps {
+	        // 2. Execute build steps
+
+	        plan := m.Build
+
+	        
+
+	        // Go-specific Pre-build check
+
+	        if plan.Toolchain == "go" {
+
+	                if _, err := exec.LookPath("go"); err != nil {
+
+	                        return fmt.Errorf("go toolchain required but not found in PATH")
+
+	                }
+
+	        }
+
+	
+
+	        for _, step := range plan.Steps {
+
+	
 		fmt.Printf("Executing: %s\n", step)
 		args := strings.Fields(step)
 		buildCmd := exec.CommandContext(ctx, args[0], args[1:]...)
@@ -162,10 +182,29 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 		}
 	}
 
-	// 3. Move binary
-	srcBin := filepath.Join(workDir, plan.Bin)
+	        // 3. Move binary
+
+	        binPattern := filepath.Join(workDir, plan.Bin)
+
+	        matches, err := filepath.Glob(binPattern)
+
+	        srcBin := ""
+
+	        if err == nil && len(matches) > 0 {
+
+	                srcBin = matches[0] // Pick the first match
+
+	        } else {
+
+	                srcBin = binPattern // Fallback to literal path
+
+	        }
+
 	
-	targetDir := ""
+
+	        targetDir := ""
+
+	
 	if plan.InstallDir != "" {
 		targetDir = plan.InstallDir
 	} else {
@@ -379,9 +418,48 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, error
 				readmeContent = content
 			}
 		}
-	}
-
-	fmt.Println("Generating build plan via AI...")
+			}
+	
+			// First-class Go support: Detect go.mod and goreleaser
+			isGo := false
+			hasGoReleaser := false
+			for _, f := range files {
+				if f == "go.mod" {
+					isGo = true
+				}
+				if strings.Contains(f, ".goreleaser.yaml") || strings.Contains(f, ".goreleaser.yml") {
+					hasGoReleaser = true
+				}
+			}
+	
+			if isGo {
+				fmt.Println("detected Go project, optimizing build plan...")
+				var steps []string
+				binName := repo
+				
+				if hasGoReleaser {
+					fmt.Println("found GoReleaser config, using goreleaser for build...")
+					steps = []string{"goreleaser build --snapshot --single-target --clean"}
+					// We assume binName stays same or we try to find it in dist/
+					binName = "dist/" + repo + "_*/" + repo 
+					// Note: Real implementation would parse .goreleaser.yaml to find the exact bin
+				} else {
+					steps = []string{"go build -v -o " + binName}
+				}
+	
+				return &Manifest{
+					Name:    repo,
+					Version: "latest",
+					Build: agent.BuildPlan{
+						Toolchain: "go",
+						Steps:     steps,
+						Bin:       binName,
+					},
+				}, nil
+			}
+	
+			fmt.Println("Generating build plan via AI...")
+	
 	plan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
 	if err != nil {
 		return nil, err
