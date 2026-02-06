@@ -20,7 +20,8 @@ The `anyisland.json` file should be placed in the root of your repository. It te
     "steps": [
       "go build -o your-tool ."
     ],
-    "bin": "your-tool"
+    "bin": "your-tool",
+    "install_dir": "/usr/local/bin"
   }
 }
 ```
@@ -30,6 +31,7 @@ The `anyisland.json` file should be placed in the root of your repository. It te
 - `build`:
     - `steps`: A list of shell commands required to build your tool from source.
     - `bin`: The relative path to the resulting binary after the build steps are executed.
+    - `install_dir`: (Optional) The preferred absolute path where the binary should be installed. If omitted, Anyisland will install it in `~/.anyisland/bin`.
 
 ## Official Packages
 

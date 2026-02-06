@@ -6,8 +6,9 @@ import (
 )
 
 type BuildPlan struct {
-	Steps []string `json:"steps"`
-	Bin   string   `json:"bin"`
+	Steps      []string `json:"steps"`
+	Bin        string   `json:"bin"`
+	InstallDir string   `json:"install_dir,omitempty"` // Preferred binary path location
 }
 
 type Synthesizer interface {

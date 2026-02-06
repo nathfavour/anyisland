@@ -14,7 +14,8 @@ Official packages are stored in the `packages/official` directory. To add a new 
   "version": "version-string",
   "build": {
     "steps": ["command1", "command2"],
-    "bin": "relative/path/to/binary"
+    "bin": "relative/path/to/binary",
+    "install_dir": "/optional/preferred/install/path"
   }
 }
 ```

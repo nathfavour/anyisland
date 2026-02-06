@@ -149,12 +149,21 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 	// 3. Move binary
 	srcBin := filepath.Join(workDir, plan.Bin)
 	
-	targetDir := i.sys.GetIslandBinDir()
-	if plan.Bin == "anyisland" || plan.Bin == "anyislandd" {
-		targetDir = i.sys.GetBinDir()
+	targetDir := ""
+	if plan.InstallDir != "" {
+		targetDir = plan.InstallDir
+	} else {
+		targetDir = i.sys.GetIslandBinDir()
+		if plan.Bin == "anyisland" || plan.Bin == "anyislandd" {
+			targetDir = i.sys.GetBinDir()
+		}
 	}
 	
-	dstBin := filepath.Join(targetDir, plan.Bin)
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return fmt.Errorf("failed to create target directory: %w", err)
+	}
+
+	dstBin := filepath.Join(targetDir, filepath.Base(plan.Bin))
 	fmt.Printf("Installing %s to %s...\n", srcBin, dstBin)
 	
 	// Handle "text file busy" by renaming existing binary first
