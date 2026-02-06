@@ -874,119 +874,183 @@ var (
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        if !available {
+	                                                                                                                                                                                                                                                                                if !available {
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                if len(args) > 0 {
+	                                                                                                                                                                                                                                                                                        fmt.Printf("Anyisland is already at the latest version (%s).\n", latest[:7])
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                        fmt.Printf("Anyisland is already at the latest version (%s).\n", latest[:7])
+	                                                                                                                                                                                                                                                                                        // If no args, we just continue to update other tools
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                }
+	                                                                                                                                                                                                                                                                                        if len(args) == 0 {
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                // If no args, we just continue to update other tools
+	                                                                                                                                                                                                                                                                                                goto updateTools
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                if len(args) == 0 {
+	                                                                                                                                                                                                                                                                                        }
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                        goto updateTools
+	                                                                                                                                                                                                                                                                                        return nil
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                }
+	                                                                                                                                                                                                                                                                                }
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                return nil
+	                                                                                                                                                                                                                        
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        }
+	                                                                                                                                                                                                                                                                                fmt.Printf("🔄 Updating Anyisland to %s...\n", latest[:7])
 	        
 	                                                                                                
 	        
-	                                                                                                                                                
+	                                                                                                                                                                                                                                                
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        fmt.Printf("🔄 Updating Anyisland to %s...\n", latest[:7])
+	                                                                                                                                                                                                                                                                                // Perform the real update via Ingestor
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                ingestor := cli.NewIngestor(ag, sys)
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        // Perform the real update via Ingestor
+	                                                                                                                                                                                                                                                                                manifest, commit, err := ingestor.Ingest(cmd.Context(), "https://github.com/nathfavour/anyisland")
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        ingestor := cli.NewIngestor(ag, sys)
+	                                                                                                                                                                                                                                                                                if err != nil {
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        manifest, commit, err := ingestor.Ingest(cmd.Context(), "https://github.com/nathfavour/anyisland")
+	                                                                                                                                                                                                                                                                                        return err
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        if err != nil {
+	                                                                                                                                                                                                                                                                                }
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                return err
+	                                                                                                                                                                                                                                                
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        }
+	                                                                                                                                                                                                                                                                                fmt.Printf("Downloading and building latest version (%s)...\n", commit[:7])
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                hash, installPath, err := ingestor.Build(cmd.Context(), manifest, "https://github.com/nathfavour/anyisland")
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        fmt.Printf("Downloading and building latest version (%s)...\n", commit[:7])
+	                                                                                                                                                                                                                                                                                if err != nil {
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        if _, _, err := ingestor.Build(cmd.Context(), manifest, "https://github.com/nathfavour/anyisland"); err != nil {
+	                                                                                                                                                                                                                                                                                        return err
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                return err
+	                                                                                                                                                                                                                                                                                }
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        }
+	                                                                                                                                                                                                                                                
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                fmt.Println("✅ Anyisland has been updated successfully!")
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        fmt.Println("✅ Anyisland has been updated successfully!")
+	                                                                                                                                                                                                        
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        lm.HotSwap()
+	                                                                                                                                                                                                                                                                                // Register Anyisland in the registry so it's tracked
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                        return nil
+	                                                                                                                                                                                                                                                                                reg, err := registry.Open(sys.GetIslandDir())
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                }
+	                                                                                                                                                                                                                                                                                if err == nil {
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                        reg.RegisterTool(registry.Tool{
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                Name:        manifest.Name,
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                Source:      "https://github.com/nathfavour/anyisland",
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                Version:     manifest.Version,
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                LastCommit:  commit,
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                BinaryHash:  hash,
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                InstallPath: installPath,
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                Type:        "source",
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                        })
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                        reg.Close()
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                }
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                        
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                lm.HotSwap()
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                return nil
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                        }
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                        
 	        
 	                                                                                                
 	        

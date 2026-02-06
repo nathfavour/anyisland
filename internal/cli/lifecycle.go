@@ -11,6 +11,7 @@ import (
 
 	"github.com/nathfavour/anyisland/internal/agent"
 	"github.com/nathfavour/anyisland/internal/pal"
+	"github.com/nathfavour/anyisland/internal/registry"
 )
 
 type LifecycleEvent struct {
@@ -83,6 +84,20 @@ func (m *LifecycleManager) SelfInstall() error {
 	// 3. Shell Injection
 	if err := m.sys.InjectPath(); err != nil {
 		return err
+	}
+
+	// 4. Register in database
+	reg, err := registry.Open(m.sys.GetIslandDir())
+	if err == nil {
+		defer reg.Close()
+		reg.RegisterTool(registry.Tool{
+			Name:        binName,
+			Source:      "https://github.com/nathfavour/anyisland",
+			Version:     Version,
+			LastCommit:  Commit,
+			InstallPath: targetPath,
+			Type:        "source",
+		})
 	}
 
 	return m.LogEvent(LifecycleEvent{
@@ -189,10 +204,25 @@ func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Sy
 	}
 
 	// Build and install the latest version
-	_, _, err = ingestor.Build(ctx, manifest, "https://github.com/nathfavour/anyisland")
+	hash, installPath, err := ingestor.Build(ctx, manifest, "https://github.com/nathfavour/anyisland")
 	if err != nil {
 		fmt.Printf("⚠️ Auto-update build failed: %v\n", err)
 		return
+	}
+
+	// Update registry
+	reg, err := registry.Open(m.sys.GetIslandDir())
+	if err == nil {
+		defer reg.Close()
+		reg.RegisterTool(registry.Tool{
+			Name:        manifest.Name,
+			Source:      "https://github.com/nathfavour/anyisland",
+			Version:     manifest.Version,
+			LastCommit:  latest,
+			BinaryHash:  hash,
+			InstallPath: installPath,
+			Type:        "source",
+		})
 	}
 	
 	fmt.Printf("✨ Anyisland auto-updated to %s. Restarting...\n", latest[:7])
