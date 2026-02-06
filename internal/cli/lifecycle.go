@@ -114,7 +114,7 @@ func (m *LifecycleManager) SelfInstall() error {
 func (m *LifecycleManager) Rollback() error {
 	binDir := m.sys.GetBinDir()
 	anyislandPath := filepath.Join(binDir, "anyisland")
-	oldPath := anyislandPath + ".old"
+	oldPath := anyislandPath + ".bak"
 
 	if _, err := os.Stat(oldPath); os.IsNotExist(err) {
 		return fmt.Errorf("no rollback version found at %s", oldPath)

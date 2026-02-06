@@ -284,10 +284,9 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 	fmt.Printf("Installing %s to %s...\n", srcBin, dstBin)
 
 	if _, err := os.Stat(dstBin); err == nil {
-		oldBin := dstBin + ".old"
+		oldBin := dstBin + ".bak"
 		_ = os.Remove(oldBin)
 		os.Rename(dstBin, oldBin)
-		defer os.Remove(oldBin)
 	}
 
 	input, err := os.ReadFile(srcBin)

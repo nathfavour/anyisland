@@ -991,14 +991,31 @@ import (
 	                                        
 	                                                                                                        
 	                                        
-	                                                                                                        <-ctx.Done()
+	                                                                                                                                        <-ctx.Done()
 	                                        
-	                                                                                                        return nil
+	                                                                                                        
 	                                        
-	                                                                                                },
+	                                                                                                                                        return nil
 	                                        
-	                                                                                        }	                rollbackCmd = &cobra.Command{
-	                        Use:   "rollback",
+	                                                                                                        
+	                                        
+	                                                                                                                                },
+	                                        
+	                                                                                                        
+	                                        
+	                                                                                                                        }
+	                                        
+	                                                                                                        
+	                                        
+	                                                                                                        
+	                                        
+	                                                                                                        
+	                                        
+	                                                                                                                        rollbackCmd = &cobra.Command{
+	                                        
+	                                                                                                        
+	                                        
+	                                                                                                                                Use:   "rollback",
 	                        Short: "Rollback to the previous version of Anyisland",
 	                        RunE: func(cmd *cobra.Command, args []string) error {
 	                                sys, err := pal.New()
