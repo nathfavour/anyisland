@@ -523,12 +523,9 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 
 		// we must ensure it doesn't overwrite the manager via a generic install.
 
-		if manifest.Name == "anyisland" || manifest.Name == "anyislandd" {
-
-			return manifest, commit, fmt.Errorf("this repository contains Anyisland core components. Please use 'anyisland update' to manage the manager itself")
-
-		}
-
+		if manifest.Name == "anyisland" {
+		                        return manifest, commit, fmt.Errorf("this repository contains Anyisland core components. Please use 'anyisland update' to manage the manager itself")
+		                }
 	
 
 		return manifest, commit, nil
