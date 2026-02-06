@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nathfavour/anyisland/internal/agent"
 	"github.com/nathfavour/anyisland/internal/pal"
 	"github.com/nathfavour/anyisland/internal/registry"
 )

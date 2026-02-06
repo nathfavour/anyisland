@@ -3,7 +3,9 @@ package main
 import (
         "fmt"
         "os"
+        "os/exec"
         "path/filepath"
+        "runtime"
         "strings"
 	"github.com/spf13/cobra"
 	"github.com/nathfavour/anyisland/internal/pal"
