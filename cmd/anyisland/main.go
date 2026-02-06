@@ -1158,13 +1158,12 @@ var (
 	                                                                        return fmt.Errorf("tool %s not found in registry", target)
 	                                                                  }
 	                                                                                            } else {
-	                                                                                                    // Update all tools if no specific tool is named
-	                                                                                                    for _, t := range tools {
-	                                                                                                            if t.Name != "anyisland" && t.Name != "anyislandd" {
-	                                                                                                                    toUpdate = append(toUpdate, t)
-	                                                                                                            }
-	                                                                                                    }
-	                                                                                            }
+	                                                                                                                                                                                                                // Update all tools if no specific tool is named
+	                                                                                                                                                                                                                for _, t := range tools {
+	                                                                                                                                                                                                                        if !strings.HasPrefix(t.Name, "anyisland") && !strings.HasPrefix(t.Name, "anyislandd") {
+	                                                                                                                                                                                                                                toUpdate = append(toUpdate, t)
+	                                                                                                                                                                                                                        }
+	                                                                                                                                                                                                                }	                                                                                            }
 	                                                          
 	                        	                        ag := getSynthesizer()
 	                        ingestor := cli.NewIngestor(ag, sys)
