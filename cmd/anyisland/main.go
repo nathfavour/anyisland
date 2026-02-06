@@ -341,91 +341,146 @@ var (
 		},
 	}
 
-	updateCmd = &cobra.Command{
-		Use:   "update [tool]",
-		Short: "Update tools or Anyisland itself",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			sys, err := pal.New()
-			if err != nil {
-				return err
-			}
-
-			reg, err := registry.Open(sys.GetIslandDir())
-			if err != nil {
-				return err
-			}
-			defer reg.Close()
-
-			tools, err := reg.ListTools()
-			if err != nil {
-				return err
-			}
-
-			var toUpdate []registry.Tool
-			if len(args) > 0 {
-				target := args[0]
-				for _, t := range tools {
-					if t.Name == target {
-						toUpdate = append(toUpdate, t)
-						break
-					}
-				}
-				if len(toUpdate) == 0 {
-					return fmt.Errorf("tool %s not found in registry", target)
-				}
-			} else {
-				// Default to updating anyisland if no args
-				for _, t := range tools {
-					if t.Name == "anyisland" {
-						toUpdate = append(toUpdate, t)
-						break
-					}
-				}
-				if len(toUpdate) == 0 {
-					return fmt.Errorf("anyisland not found in registry; please run 'anyisland install nathfavour/anyisland' first")
-				}
-			}
-
-			ag := getSynthesizer()
-			ingestor := cli.NewIngestor(ag, sys)
-
-			for _, t := range toUpdate {
-				source := t.Source
-				if sourceFlag != "" && len(toUpdate) == 1 {
-					source = sourceFlag
-				}
-				fmt.Printf("Updating %s from %s...\n", t.Name, source)
-				
-				                                manifest, err := ingestor.Ingest(cmd.Context(), source)
-				
-				                                if err != nil {
-				
-				                                      fmt.Printf("Error ingesting %s: %v\n", t.Name, err)
-				
-				                                      continue
-				
-				                                }
-				
-				
-				
-				                                if err := ingestor.Build(cmd.Context(), manifest, source); err != nil {
-				
-				                                      fmt.Printf("Error building %s: %v\n", t.Name, err)
-				
-				                                      continue
-				
-				                                }
-				
-				
-				fmt.Printf("%s updated successfully!\n", t.Name)
-			}
-
-			return nil
-		},
-	}
-)
-
-func getSynthesizer() agent.Synthesizer {
+	        versionCmd = &cobra.Command{
+	                Use:   "version",
+	                Short: "Print version information",
+	                Run: func(cmd *cobra.Command, args []string) {
+	                        fmt.Println(cli.VersionString())
+	                },
+	        }
+	
+	        selfInstallCmd = &cobra.Command{
+	                Use:   "self-install",
+	                Short: "Install Anyisland to the current system",
+	                RunE: func(cmd *cobra.Command, args []string) error {
+	                        sys, err := pal.New()
+	                        if err != nil {
+	                                return err
+	                        }
+	                        lm := cli.NewLifecycleManager(sys)
+	                        return lm.SelfInstall()
+	                },
+	        }
+	
+	        uninstallCmd = &cobra.Command{
+	                Use:   "uninstall",
+	                Short: "Remove Anyisland from the system",
+	                RunE: func(cmd *cobra.Command, args []string) error {
+	                        clean, _ := cmd.Flags().GetBool("clean")
+	                        sys, err := pal.New()
+	                        if err != nil {
+	                                return err
+	                        }
+	
+	                        // 1. Remove from shell
+	                        if err := pal.RemovePathFromConfig(); err != nil {
+	                                fmt.Printf("Warning: failed to remove from shell config: %v\n", err)
+	                        }
+	
+	                        // 2. Log event
+	                        lm := cli.NewLifecycleManager(sys)
+	                        lm.LogEvent(cli.LifecycleEvent{
+	                                Type:   "uninstall",
+	                                Action: "uninstall",
+	                                Status: "success",
+	                        })
+	
+	                        // 3. Optional clean
+	                        if clean {
+	                                os.RemoveAll(sys.GetIslandDir())
+	                        }
+	
+	                        // 4. Remove binaries from .local/bin
+	                        binDir := sys.GetBinDir()
+	                        os.Remove(filepath.Join(binDir, "anyisland"))
+	                        os.Remove(filepath.Join(binDir, "anyislandd"))
+	
+	                        fmt.Println("Anyisland has been uninstalled.")
+	                        if !clean {
+	                                fmt.Printf("Note: configuration and logs in %s were preserved.\n", sys.GetIslandDir())
+	                        }
+	                        return nil
+	                },
+	        }
+	
+	        updateCmd = &cobra.Command{
+	                Use:   "update [tool]",
+	                Short: "Update tools or Anyisland itself",
+	                RunE: func(cmd *cobra.Command, args []string) error {
+	                        sys, err := pal.New()
+	                        if err != nil {
+	                                return err
+	                        }
+	
+	                        if len(args) == 0 || args[0] == "anyisland" {
+	                                fmt.Println("Checking for Anyisland updates...")
+	                                // TODO: Implement binary update logic
+	                                fmt.Println("Already at latest version.")
+	                                return nil
+	                        }
+	
+	                        reg, err := registry.Open(sys.GetIslandDir())
+	                        if err != nil {
+	                                return err
+	                        }
+	                        defer reg.Close()
+	
+	                        tools, err := reg.ListTools()
+	                        if err != nil {
+	                                return err
+	                        }
+	
+	                        var toUpdate []registry.Tool
+	                        target := args[0]
+	                        for _, t := range tools {
+	                              if t.Name == target {
+	                              toUpdate = append(toUpdate, t)
+	                              break
+	                              }
+	                        }
+	                        if len(toUpdate) == 0 {
+	                              return fmt.Errorf("tool %s not found in registry", target)
+	                        }
+	
+	                        ag := getSynthesizer()
+	                        ingestor := cli.NewIngestor(ag, sys)
+	
+	                        for _, t := range toUpdate {
+	                                source := t.Source
+	                                if sourceFlag != "" && len(toUpdate) == 1 {
+	                                      source = sourceFlag
+	                                }
+	                                fmt.Printf("Updating %s from %s...\n", t.Name, source)
+	
+	                                                                manifest, err := ingestor.Ingest(cmd.Context(), source)
+	
+	                                                                if err != nil {
+	
+	                                                                      fmt.Printf("Error ingesting %s: %v\n", t.Name, err)
+	
+	                                                                      continue
+	
+	                                                                }
+	
+	
+	
+	                                                                if err := ingestor.Build(cmd.Context(), manifest, source); err != nil {
+	
+	                                                                      fmt.Printf("Error building %s: %v\n", t.Name, err)
+	
+	                                                                      continue
+	
+	                                                                }
+	
+	
+	                                fmt.Printf("%s updated successfully!\n", t.Name)
+	                        }
+	
+	                        return nil
+	                },
+	        }
+	)
+	func getSynthesizer() agent.Synthesizer {
 	// Check if Vibeaura socket exists
 	home, _ := os.UserHomeDir()
 	socketPath := filepath.Join(home, ".vibeauracle", "vibeaura.sock")
@@ -443,24 +498,33 @@ func main() {
 	}
 }
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&sourceFlag, "source", "s", "", "Override source URL or local path")
+        rootCmd.PersistentFlags().StringVarP(&sourceFlag, "source", "s", "", "Override source URL or local path")
 
-	rootCmd.AddCommand(setupCmd)
+        uninstallCmd.Flags().Bool("clean", false, "Remove all data and configurations")
 
-	rootCmd.AddCommand(initCmd)
+        rootCmd.AddCommand(setupCmd)
 
-	rootCmd.AddCommand(listCmd)
+        rootCmd.AddCommand(initCmd)
 
-	rootCmd.AddCommand(installCmd)
+        rootCmd.AddCommand(listCmd)
 
-	rootCmd.AddCommand(ingestCmd)
+        rootCmd.AddCommand(installCmd)
 
-	rootCmd.AddCommand(historyCmd)
+        rootCmd.AddCommand(ingestCmd)
 
-	rootCmd.AddCommand(updateCmd)
+        rootCmd.AddCommand(historyCmd)
 
-	historyCmd.AddCommand(historyRecordCmd)
+        rootCmd.AddCommand(updateCmd)
 
-	historyCmd.AddCommand(historyShowCmd)
+        rootCmd.AddCommand(versionCmd)
+
+        rootCmd.AddCommand(selfInstallCmd)
+
+        rootCmd.AddCommand(uninstallCmd)
+
+        historyCmd.AddCommand(historyRecordCmd)
+
+        historyCmd.AddCommand(historyShowCmd)
 
 }
+

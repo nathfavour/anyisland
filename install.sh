@@ -1,45 +1,55 @@
 #!/bin/bash
 set -e
 
-# Anyisland Bootstrap Script
-# This script builds Anyisland from source and installs it to ~/.local/bin
+# Anyisland Universal Bootstrap
+# This script prepares the system and hands off to the Anyisland binary.
 
 ISLAND_DIR="$HOME/.anyisland"
 LOCAL_BIN="$HOME/.local/bin"
+VERSION="latest"
 
-echo "🏝️  Installing Anyisland to $LOCAL_BIN..."
+echo "🏝️  Anyisland Bootstrap"
 
-# 1. Check dependencies
+# 1. Detect Platform
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+ARCH="$(uname -m)"
+case $ARCH in
+    x86_64) ARCH="amd64" ;;
+    aarch64|arm64) ARCH="arm64" ;;
+    *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+esac
+
+echo "📍 Platform: $OS-$ARCH"
+
+# 2. Check for Go (Fallback)
 if ! command -v go &> /dev/null; then
-    echo "Error: Go is not installed. Please install Go to build Anyisland."
+    echo "⚠️  Go not found. In a full release, I would download a pre-built binary for $OS-$ARCH."
+    echo "🔨 For now, please ensure Go is installed if you want to build from source."
+    # exit 1 # In real release, we would download here
+fi
+
+# 3. Build/Download Binary
+if command -v go &> /dev/null; then
+    echo "🔨 Building Anyisland from source..."
+    go build -o anyisland ./cmd/anyisland
+    go build -o anyislandd ./cmd/anyislandd
+else
+    # This is where we would curl the binary
+    # curl -L https://github.com/nathfavour/anyisland/releases/latest/download/anyisland-$OS-$ARCH -o anyisland
+    echo "Error: Binary download not yet implemented in this prototype. Please install Go."
     exit 1
 fi
 
-# 2. Build binaries
-echo "🔨 Building Anyisland..."
-go build -o anyisland ./cmd/anyisland
-go build -o anyislandd ./cmd/anyislandd
-
-# 3. Setup directories
+# 4. Hand-off to Anyisland for self-installation
+echo "🚚 Handing off to Anyisland for system integration..."
+chmod +x anyisland anyislandd
 mkdir -p "$LOCAL_BIN"
-mkdir -p "$ISLAND_DIR"
-
-# 4. Install binaries
-echo "🚚 Installing binaries to $LOCAL_BIN..."
 mv anyisland "$LOCAL_BIN/"
 mv anyislandd "$LOCAL_BIN/"
 
-# 5. Initialize environment
-echo "⚙️  Initializing Anyisland..."
-"$LOCAL_BIN/anyisland" init
-
-if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
-    echo "⚠️  Warning: $LOCAL_BIN is not in your PATH."
-    echo "👉 Add this to your shell config (.bashrc or .zshrc):"
-    echo "   export PATH=\"\$HOME/.local/bin:\$PATH\""
-fi
+"$LOCAL_BIN/anyisland" self-install
 
 echo ""
 echo "✅ Anyisland installation complete!"
-echo "🚀 The 'anyisland' and 'anyislandd' binaries are now in $LOCAL_BIN"
-echo "👉 Ensure $LOCAL_BIN is in your PATH."
+echo "🚀 Run 'anyisland' to get started."
+echo "👉 You may need to restart your shell to update your PATH."
