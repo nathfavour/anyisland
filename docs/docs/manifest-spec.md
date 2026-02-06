@@ -78,8 +78,22 @@ The `build` object defines the lifecycle of the tool from source to executable.
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `steps` | `array[string]` | **Yes** | A sequence of shell commands to run in the root of the source directory. |
-| `bin` | `string` | **Yes** | The path to the produced binary **relative to the repository root**. This is the file Anyisland will pick up after the build steps finish. |
+| `bin` | `string` | **Yes** | The path to the produced binary **relative to the repository root**. Supports glob patterns (e.g., `dist/*_linux_amd64/mytool`). |
 | `install_dir` | `string` | No | An optional override for the installation path. Defaults to `~/.anyisland/bin/`. |
+| `toolchain` | `string` | No | The required toolchain (e.g., `go`, `rust`). Anyisland will verify this exists before building. |
+
+---
+
+## First-Class Go Support
+
+Anyisland treats Go projects as primary citizens. When a `go.mod` file is detected:
+
+1. **Automatic Detection**: Anyisland automatically identifies the project as a Go toolchain project.
+2. **Build Optimization**: It defaults to optimized build steps like `go build -v`.
+3. **GoReleaser Integration**: If a `.goreleaser.yaml` is found, Anyisland can use `goreleaser build --snapshot --single-target` to produce the binary, ensuring that all metadata and build flags defined by the author are respected.
+4. **Glob Pattern Matching**: The `bin` field supports glob patterns to easily locate binaries in complex output structures like those produced by GoReleaser (e.g., `dist/mytool_*/mytool`).
+
+---
 
 #### How Anyisland Handles Installation
 1. **Build**: Runs `steps` in the source directory.
