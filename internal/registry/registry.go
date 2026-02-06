@@ -149,6 +149,12 @@ func (r *Registry) ListTools() ([]Tool, error) {
 	return tools, nil
 }
 
+func (r *Registry) RemoveTool(name string) error {
+	query := `DELETE FROM tools WHERE name = ?`
+	_, err := r.db.Exec(query, name)
+	return err
+}
+
 func (r *Registry) Close() error {
 	return r.db.Close()
 }

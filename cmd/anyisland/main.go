@@ -777,47 +777,98 @@ var (
 	                },
 	        }
 	
-	        uninstallCmd = &cobra.Command{
-	                Use:   "uninstall",
-	                Short: "Remove Anyisland from the system",
-	                RunE: func(cmd *cobra.Command, args []string) error {
-	                        clean, _ := cmd.Flags().GetBool("clean")
-	                        sys, err := pal.New()
-	                        if err != nil {
-	                                return err
-	                        }
-	
-	                        // 1. Remove from shell
-	                        if err := pal.RemovePathFromConfig(); err != nil {
-	                                fmt.Printf("Warning: failed to remove from shell config: %v\n", err)
-	                        }
-	
-	                        // 2. Log event
-	                        lm := cli.NewLifecycleManager(sys)
-	                        lm.LogEvent(cli.LifecycleEvent{
-	                                Type:   "uninstall",
-	                                Action: "uninstall",
-	                                Status: "success",
-	                        })
-	
-	                        // 3. Optional clean
-	                        if clean {
-	                                os.RemoveAll(sys.GetIslandDir())
-	                        }
-	
-	                        // 4. Remove binaries from .local/bin
-	                        binDir := sys.GetBinDir()
-	                        os.Remove(filepath.Join(binDir, "anyisland"))
-	                        os.Remove(filepath.Join(binDir, "anyislandd"))
-	
-	                        fmt.Println("Anyisland has been uninstalled.")
-	                        if !clean {
-	                                fmt.Printf("Note: configuration and logs in %s were preserved.\n", sys.GetIslandDir())
-	                        }
-	                        return nil
-	                },
-	        }
-	
+	                        uninstallCmd = &cobra.Command{
+	                                Use:   "uninstall [tool]",
+	                                Short: "Remove a tool or Anyisland itself",
+	                                Args:  cobra.MaximumNArgs(1),
+	                                RunE: func(cmd *cobra.Command, args []string) error {
+	                                        sys, err := pal.New()
+	                                        if err != nil {
+	                                                return err
+	                                        }
+	        
+	                                        if len(args) > 0 {
+	                                                toolName := args[0]
+	                                                reg, err := registry.Open(sys.GetIslandDir())
+	                                                if err != nil {
+	                                                        return err
+	                                                }
+	                                                defer reg.Close()
+	        
+	                                                tool, err := reg.GetTool(toolName)
+	                                                if err != nil {
+	                                                        return err
+	                                                }
+	                                                if tool == nil {
+	                                                        return fmt.Errorf("tool %s not found", toolName)
+	                                                }
+	        
+	                                                fmt.Printf("Uninstalling %s...\n", toolName)
+	                                                
+	                                                // 1. Remove binary
+	                                                if tool.InstallPath != "" {
+	                                                        if err := os.Remove(tool.InstallPath); err != nil {
+	                                                                fmt.Printf("Warning: failed to remove binary: %v\n", err)
+	                                                        }
+	                                                }
+	        
+	                                                // 2. Remove app directory (for node/python/flutter)
+	                                                appDir := filepath.Join(sys.GetIslandBinDir(), toolName+"-app")
+	                                                if _, err := os.Stat(appDir); err == nil {
+	                                                        if err := os.RemoveAll(appDir); err != nil {
+	                                                                fmt.Printf("Warning: failed to remove app directory: %v\n", err)
+	                                                        }
+	                                                }
+	        
+	                                                // 3. Remove from registry
+	                                                if err := reg.RemoveTool(toolName); err != nil {
+	                                                        return err
+	                                                }
+	        
+	                                                fmt.Printf("Successfully uninstalled %s\n", toolName)
+	                                                return nil
+	                                        }
+	        
+	                                        // Self-uninstall logic (no args)
+	                                        clean, _ := cmd.Flags().GetBool("clean")
+	                                        
+	                                        fmt.Print("Are you sure you want to uninstall Anyisland? (y/N): ")
+	                                        var response string
+	                                        fmt.Scanln(&response)
+	                                        if strings.ToLower(response) != "y" {
+	                                                return nil
+	                                        }
+	        
+	                                        // 1. Remove from shell
+	                                        if err := pal.RemovePathFromConfig(); err != nil {
+	                                                fmt.Printf("Warning: failed to remove from shell config: %v\n", err)
+	                                        }
+	        
+	                                        // 2. Log event
+	                                        lm := cli.NewLifecycleManager(sys)
+	                                        lm.LogEvent(cli.LifecycleEvent{
+	                                                Type:   "uninstall",
+	                                                Action: "uninstall",
+	                                                Status: "success",
+	                                        })
+	        
+	                                        // 3. Optional clean
+	                                        if clean {
+	                                                os.RemoveAll(sys.GetIslandDir())
+	                                        }
+	        
+	                                        // 4. Remove binaries from .local/bin
+	                                        binDir := sys.GetBinDir()
+	                                        os.Remove(filepath.Join(binDir, "anyisland"))
+	                                        os.Remove(filepath.Join(binDir, "anyislandd"))
+	        
+	                                        fmt.Println("Anyisland has been uninstalled.")
+	                                        if !clean {
+	                                                fmt.Printf("Note: configuration and logs in %s were preserved.\n", sys.GetIslandDir())
+	                                        }
+	                                        return nil
+	                                },
+	                        }	
 	                rollbackCmd = &cobra.Command{
 	                        Use:   "rollback",
 	                        Short: "Rollback to the previous version of Anyisland",
