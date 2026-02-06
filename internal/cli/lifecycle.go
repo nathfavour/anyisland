@@ -172,19 +172,8 @@ func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Sy
 		return
 	}
 
-	// 1. Smart Cooldown: Only check every 5 minutes unless forced
-	now := time.Now().Unix()
-	if now-cfg.Update.LastCheck < 300 {
-		return
-	}
-
-	// 2. Fast check
+	// Fast check (uses git ls-remote)
 	latest, available, err := m.CheckAnyislandUpdate(ctx, ag)
-	
-	// Update last check time regardless of success to prevent hammering on network failure
-	cfg.Update.LastCheck = now
-	cm.Save(cfg)
-
 	if err != nil || !available {
 		return
 	}
