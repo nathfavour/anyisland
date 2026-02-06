@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"github.com/spf13/cobra"
 	"github.com/nathfavour/anyisland/internal/pal"
@@ -663,15 +664,20 @@ var (
 		},
 	}
 
-	        versionCmd = &cobra.Command{
-	                Use:   "version",
-	                Short: "Print version information",
-	                Run: func(cmd *cobra.Command, args []string) {
-	                        fmt.Println(cli.VersionString())
-	                },
-	        }
-	
-	        selfInstallCmd = &cobra.Command{
+	                        versionCmd = &cobra.Command{
+	                                Use:   "version",
+	                                Short: "Print detailed version information",
+	                                Run: func(cmd *cobra.Command, args []string) {
+	                                        fmt.Println("🏝️ Anyisland - Detailed Version Information")
+	                                        fmt.Println("─────────────────────────────────────────────")
+	                                        fmt.Printf("Version:    %s\n", cli.Version)
+	                                        fmt.Printf("Commit:     %s\n", cli.Commit)
+	                                        fmt.Printf("Built:      %s\n", cli.BuildTime)
+	                                        fmt.Printf("Platform:   %s/%s\n", runtime.GOOS, runtime.GOARCH)
+	                                        fmt.Printf("Compiler:   %s\n", runtime.Version())
+	                                },
+	                        }
+	        	        selfInstallCmd = &cobra.Command{
 	                Use:   "self-install",
 	                Short: "Install Anyisland to the current system",
 	                RunE: func(cmd *cobra.Command, args []string) error {

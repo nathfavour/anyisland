@@ -9,8 +9,10 @@ var (
 	Version   = "0.1.0-dev"
 	Commit    = "none"
 	BuildTime = "unknown"
+	GoVersion = runtime.Version()
 )
 
 func VersionString() string {
-	return fmt.Sprintf("anyisland %s (%s) %s/%s build:%s", Version, Commit, runtime.GOOS, runtime.GOARCH, BuildTime)
+	return fmt.Sprintf("anyisland %s\nCommit: %s\nBuilt: %s\nPlatform: %s/%s\nCompiler: %s", 
+		Version, Commit, BuildTime, runtime.GOOS, runtime.GOARCH, GoVersion)
 }
