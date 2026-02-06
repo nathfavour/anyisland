@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -168,7 +169,10 @@ func (m *LifecycleManager) CheckAnyislandUpdate(ctx context.Context, ag agent.Sy
 	}
 
 	curCommit := GetEffectiveCommit()
-	if latestCommit == curCommit && curCommit != "none" {
+	// Normalize for comparison: strip "(dirty)" suffix if present
+	cleanCurCommit := strings.Split(curCommit, " ")[0]
+
+	if latestCommit == cleanCurCommit && cleanCurCommit != "none" {
 		return latestCommit, false, nil
 	}
 

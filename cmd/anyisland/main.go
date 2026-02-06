@@ -1174,25 +1174,37 @@ var (
 	
 	                        for _, t := range toUpdate {
 	                                source := t.Source
-	                                if sourceFlag != "" && len(toUpdate) == 1 {
-	                                      source = sourceFlag
-	                                }
-	                                                                        fmt.Printf("Updating %s from %s...\n", t.Name, source)
-	                                
-	                                                                                                        manifest, commit, err := ingestor.Ingest(cmd.Context(), source)
-	                                
-	                                                                                                        if err != nil {
-	                                
-	                                                                                                              fmt.Printf("Error ingesting %s: %v\n", t.Name, err)
-	                                
-	                                                                                                              continue
-	                                
-	                                                                                                        }
-	                                
-	                                
-	                                
-	                                                                                                        hash, installPath, err := ingestor.Build(cmd.Context(), manifest, source)
-	                                
+	                                                                        if sourceFlag != "" && len(toUpdate) == 1 {
+	                                                                              source = sourceFlag
+	                                                                        }
+	                                                                                                                fmt.Printf("Checking %s for updates...\n", t.Name)
+	                                                                                                                
+	                                                                                                                latestCommit, _ := ingestor.DiscoverLatestCommit(cmd.Context(), source)
+	                                                                                                                if latestCommit != "" && t.LastCommit == latestCommit {
+	                                                                                                                        if ingestor.VerifyToolIntegrity(t.InstallPath, t.BinaryHash) {
+	                                                                                                                                fmt.Printf("%s is already up-to-date (%s)\n", t.Name, latestCommit[:7])
+	                                                                                                                                continue
+	                                                                                                                        }
+	                                                                                                                        fmt.Printf("%s seems broken. Reinstalling...\n", t.Name)
+	                                                                                                                }
+	                                                                        
+	                                                                                                                manifest, commit, err := ingestor.Ingest(cmd.Context(), source)
+	                                                                                                                
+	                                                                                                                if err != nil {
+	                                                                                                                
+	                                                                                                                                                                                              fmt.Printf("Error ingesting %s: %v\n", t.Name, err)
+	                                                                                                                
+	                                                                                                                                                                                              continue
+	                                                                                                                
+	                                                                                                                                                                                        }
+	                                                                        
+	                                                                                                                if t.LastCommit != commit {
+	                                                                                                                        fmt.Printf("Updating %s from %s to %s...\n", t.Name, t.LastCommit[:7], commit[:7])
+	                                                                                                                }
+	                                                                                                                                                
+	                                                                                                                                                
+	                                                                                                                                                
+	                                                                                                                                                                                                                        hash, installPath, err := ingestor.Build(cmd.Context(), manifest, source)	                                
 	                                                                                                        if err != nil {
 	                                
 	                                                                                                              fmt.Printf("Error building %s: %v\n", t.Name, err)
