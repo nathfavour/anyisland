@@ -57,19 +57,9 @@ func (m *HeuristicSynthesizer) RedactCommand(ctx context.Context, command string
 
 
 func (m *HeuristicSynthesizer) GenerateBuildPlan(ctx context.Context, repoURL string, files []string, readme string) (*BuildPlan, error) {
-
 	// If we've reached here, first-class detection in Ingestor failed.
-
-	// We'll provide a very basic generic fallback.
-
-	return &BuildPlan{
-
-		Steps: []string{"# please manually edit anyisland.json - heuristic could not determine build steps"},
-
-		Bin:   "tool",
-
-	}, nil
-
+	// We'll return an error instead of an invalid build plan.
+	return nil, fmt.Errorf("heuristic could not determine build steps. please provide an anyisland.json in the repository")
 }
 
 

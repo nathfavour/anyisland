@@ -412,6 +412,12 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		}
 	}
 
+	// AI Discretion Check
+	discretion, err := i.agent.AnalyzeDiscretion(ctx, files, readmeContent)
+	if err == nil && discretion != nil && !discretion.Allowed {
+		return nil, commit, fmt.Errorf("repository is not a buildable tool: %s", discretion.Reason)
+	}
+
 	isGo := false
 	for _, f := range files {
 		if f == "go.mod" {
