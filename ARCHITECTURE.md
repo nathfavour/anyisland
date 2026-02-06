@@ -8,7 +8,7 @@ The primary interface for user interaction. It is a stateless binary responsible
  * Ingestion: Accepting GitHub URLs and triggering the AI analysis flow.
  * Manual Management: Standard install, update, and remove commands.
  * Environment Injection: Managing the user's PATH and shell aliases across different platforms (Windows, macOS, Linux).
-B. The Island Daemon (anyislandd)
+B. The Integrated Daemon (anyisland daemon start)
 A low-resource background process that acts as the "brain" of the machine.
  * Discovery Server: Listens for UDP heartbeats on port 1995 from "Anyisland-aware" tools.
  * Registry Manager: Maintains a local database (island.db) of all registered tools, their versions, and their GitHub sources.
