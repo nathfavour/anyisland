@@ -54,7 +54,4 @@ anyisland list
 ```bash
 # Build CLI
 go build -o anyisland ./cmd/anyisland
-
-# Build Daemon
-go build -o anyislandd ./cmd/anyislandd
 ```

@@ -4,8 +4,7 @@
   "description": "AI-powered, platform-agnostic, and decentralized package manager.",
   "build": {
     "steps": [
-      "go build -v -o anyisland ./cmd/anyisland",
-      "go build -v -o anyislandd ./cmd/anyislandd"
+      "go build -v -o anyisland ./cmd/anyisland"
     ],
         "bin": "anyisland"
       },
