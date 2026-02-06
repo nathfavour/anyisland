@@ -20,17 +20,27 @@ var (
 		Use:   "anyisland",
 		Short: "Anyisland is an AI-powered package manager",
 		Long:  `Anyisland is an AI-powered, platform-agnostic, and decentralized package manager.`,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			// Skip check for setup and init command
-			if cmd.Name() == "setup" || cmd.Name() == "init" {
-				return nil
-			}
-			sys, err := pal.New()
-			if err != nil {
-				return nil // Ignore PAL errors in PreRun to allow emergency use
-			}
-			return sys.EnsurePath()
-		},
+		                PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		                        // Skip check for setup and init command
+		                        if cmd.Name() == "setup" || cmd.Name() == "init" || cmd.Name() == "version" {
+		                                return nil
+		                        }
+		                        sys, err := pal.New()
+		                        if err != nil {
+		                                return nil // Ignore PAL errors in PreRun to allow emergency use
+		                        }
+		
+		                        // Seamless Auto-Update
+		                        ag := getSynthesizer()
+		                        lm := cli.NewLifecycleManager(sys)
+		                        // Run in background to keep the CLI snappy, 
+		                        // or run synchronously if you want to GUARANTEE latest on THIS run.
+		                        // Given the "guaranteed" requirement, we'll do it synchronously but fast.
+		                        lm.BackgroundAutoUpdate(cmd.Context(), ag)
+		
+		                        return sys.EnsurePath()
+		                },
+		
 	}
 
 	historyCmd = &cobra.Command{

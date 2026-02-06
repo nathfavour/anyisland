@@ -164,6 +164,28 @@ func (m *LifecycleManager) CheckAnyislandUpdate(ctx context.Context, ag agent.Sy
 	return latestCommit, true, nil
 }
 
+func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Synthesizer) {
+	// 1. Fast check
+	latest, available, err := m.CheckAnyislandUpdate(ctx, ag)
+	if err != nil || !available {
+		return
+	}
+
+	// 2. Silent update
+	ingestor := NewIngestor(ag, m.sys)
+	manifest, _, err := ingestor.Ingest(ctx, "https://github.com/nathfavour/anyisland")
+	if err != nil {
+		return
+	}
+
+	// Build and install the latest version
+	_, _, _ = ingestor.Build(ctx, manifest, "https://github.com/nathfavour/anyisland")
+	
+	// We don't HotSwap here to avoid interrupting the current command, 
+	// but the next run will use the new binary.
+	fmt.Printf("✨ Anyisland auto-updated to %s\n", latest[:7])
+}
+
 func syscallExec(argv0 string, argv []string, envv []string) error {
 	return syscall.Exec(argv0, argv, envv)
 }
