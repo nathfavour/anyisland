@@ -376,10 +376,18 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		})
 	} else {
 		parts := strings.Split(strings.TrimPrefix(repoURL, "https://github.com/"), "/")
+		if len(parts) < 2 {
+			return nil, commit, fmt.Errorf("invalid GitHub URL: %s", repoURL)
+		}
 		owner = parts[0]
 		repo = parts[1]
-		ghRepo, _, _ := i.gh.Repositories.Get(ctx, owner, repo)
-		defaultBranch := ghRepo.GetDefaultBranch()
+
+		ghRepo, _, err := i.gh.Repositories.Get(ctx, owner, repo)
+		defaultBranch := "main"
+		if err == nil && ghRepo != nil {
+			defaultBranch = ghRepo.GetDefaultBranch()
+		}
+
 		rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/anyisland.json", owner, repo, defaultBranch)
 		curlCmd := exec.CommandContext(ctx, "curl", "-fsSL", rawURL)
 		output, err := curlCmd.Output()
@@ -389,13 +397,19 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 				return &m, commit, nil
 			}
 		}
-		tree, _, _ := i.gh.Git.GetTree(ctx, owner, repo, defaultBranch, true)
-		for _, entry := range tree.Entries {
-			files = append(files, entry.GetPath())
+
+		tree, _, err := i.gh.Git.GetTree(ctx, owner, repo, defaultBranch, true)
+		if err == nil && tree != nil {
+			for _, entry := range tree.Entries {
+				files = append(files, entry.GetPath())
+			}
 		}
-		readme, _, _ := i.gh.Repositories.GetReadme(ctx, owner, repo, nil)
-		content, _ := readme.GetContent()
-		readmeContent = content
+
+		readme, _, err := i.gh.Repositories.GetReadme(ctx, owner, repo, nil)
+		if err == nil && readme != nil {
+			content, _ := readme.GetContent()
+			readmeContent = content
+		}
 	}
 
 	isGo := false
