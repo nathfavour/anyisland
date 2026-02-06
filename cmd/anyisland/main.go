@@ -855,19 +855,76 @@ var (
 	                                                os.RemoveAll(sys.GetIslandDir())
 	                                        }
 	        
-	                                        // 4. Remove binaries from .local/bin
-	                                        binDir := sys.GetBinDir()
-	                                        os.Remove(filepath.Join(binDir, "anyisland"))
-	                                        os.Remove(filepath.Join(binDir, "anyislandd"))
-	        
-	                                        fmt.Println("Anyisland has been uninstalled.")
-	                                        if !clean {
-	                                                fmt.Printf("Note: configuration and logs in %s were preserved.\n", sys.GetIslandDir())
-	                                        }
-	                                        return nil
-	                                },
-	                        }	
-	                rollbackCmd = &cobra.Command{
+	                                                                        // 4. Remove binaries from .local/bin
+	                                                                        binDir := sys.GetBinDir()
+	                                                                        os.Remove(filepath.Join(binDir, "anyisland"))
+	                                        
+	                                                                        fmt.Println("Anyisland has been uninstalled.")
+	                                                                        if !clean {
+	                                                                                fmt.Printf("Note: configuration and logs in %s were preserved.\n", sys.GetIslandDir())
+	                                                                        }
+	                                                                        return nil
+	                                                                },
+	                                                        }
+	                                        
+	                                                        daemonCmd = &cobra.Command{
+	                                                                Use:   "daemon",
+	                                                                Short: "Manage the Anyisland background daemon",
+	                                                        }
+	                                        
+	                                                        daemonStartCmd = &cobra.Command{
+	                                                                Use:   "daemon start",
+	                                                                Short: "Start the Anyisland daemon",
+	                                                                RunE: func(cmd *cobra.Command, args []string) error {
+	                                                                        sys, err := pal.New()
+	                                                                        if err != nil {
+	                                                                                return err
+	                                                                        }
+	                                        
+	                                                                        fmt.Println("Starting Anyisland daemon...")
+	                                                                        ctx, cancel := context.WithCancel(cmd.Context())
+	                                                                        defer cancel()
+	                                        
+	                                                                        // Setup Signal Handling
+	                                                                        sigChan := make(chan os.Signal, 1)
+	                                                                        signal.Notify(sigChan, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
+	                                                                        go func() {
+	                                                                                for sig := range sigChan {
+	                                                                                        switch sig {
+	                                                                                        case syscall.SIGHUP:
+	                                                                                                fmt.Println("Received SIGHUP, performing hot-swap...")
+	                                                                                                lm := cli.NewLifecycleManager(sys)
+	                                                                                                if err := lm.HotSwap(); err != nil {
+	                                                                                                        fmt.Printf("Hot-swap failed: %v\n", err)
+	                                                                                                }
+	                                                                                        case syscall.SIGINT, syscall.SIGTERM:
+	                                                                                                fmt.Println("Shutting down daemon...")
+	                                                                                                cancel()
+	                                                                                        }
+	                                                                                }
+	                                                                        }()
+	                                        
+	                                                                        reg, err := registry.Open(sys.GetIslandDir())
+	                                                                        if err != nil {
+	                                                                                return err
+	                                                                        }
+	                                                                        defer reg.Close()
+	                                        
+	                                                                        broker := cli.NewUpdateBroker(sys, reg)
+	                                                                        go func() {
+	                                                                                if err := broker.Start(ctx); err != nil {
+	                                                                                        fmt.Printf("Broker error: %v\n", err)
+	                                                                                }
+	                                                                        }()
+	                                        
+	                                                                        // Start Discovery Server (UDP)
+	                                                                        // We'll need to import discovery package
+	                                                                        // ... (logic would go here)
+	                                                                        
+	                                                                        <-ctx.Done()
+	                                                                        return nil
+	                                                                },
+	                                                        }	                rollbackCmd = &cobra.Command{
 	                        Use:   "rollback",
 	                        Short: "Rollback to the previous version of Anyisland",
 	                        RunE: func(cmd *cobra.Command, args []string) error {
