@@ -46,7 +46,6 @@ fi
 if command -v go &> /dev/null; then
     echo "🔨 Building Anyisland from source..."
     go build -o anyisland ./cmd/anyisland
-    go build -o anyislandd ./cmd/anyislandd
 else
     # This is where we would curl the binary
     # curl -L https://github.com/nathfavour/anyisland/releases/latest/download/anyisland-$OS-$ARCH -o anyisland
@@ -56,10 +55,9 @@ fi
 
 # 4. Hand-off to Anyisland for self-installation
 echo "🚚 Handing off to Anyisland for system integration..."
-chmod +x anyisland anyislandd
+chmod +x anyisland
 mkdir -p "$LOCAL_BIN"
 mv anyisland "$LOCAL_BIN/"
-mv anyislandd "$LOCAL_BIN/"
 
 "$LOCAL_BIN/anyisland" self-install
 
