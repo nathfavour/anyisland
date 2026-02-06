@@ -3,9 +3,8 @@ package cli
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"runtime"
-	"strings"
+	"runtime/debug"
 	"time"
 )
 
@@ -35,20 +34,32 @@ func GetEffectiveCommit() string {
 	if Commit != "none" {
 		return Commit
 	}
-	// Fallback to local git if in dev
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	out, err := cmd.Output()
-	if err == nil {
-		return strings.TrimSpace(string(out))
+
+	// Use Go's built-in build info (VCS stamping)
+	if info, ok := debug.ReadBuildInfo(); ok {
+		var rev string
+		var dirty bool
+		for _, setting := range info.Settings {
+			switch setting.Key {
+			case "vcs.revision":
+				rev = setting.Value
+			case "vcs.modified":
+				dirty = setting.Value == "true"
+			}
+		}
+		if rev != "" {
+			if dirty {
+				return rev + " (dirty)"
+			}
+			return rev
+		}
 	}
+
 	return "none"
 }
 
 func VersionString() string {
 	commit := GetEffectiveCommit()
-	if Commit == "none" && commit != "none" {
-		commit += " (local)"
-	}
 	buildTime := GetEffectiveBuildTime()
 	
 	return fmt.Sprintf("anyisland %s\nCommit: %s\nBuilt: %s\nPlatform: %s/%s\nCompiler: %s", 

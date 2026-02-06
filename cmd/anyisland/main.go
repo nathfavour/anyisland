@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
-	"strings"
-	"github.com/spf13/cobra"
+        "fmt"
+        "os"
+        "path/filepath"
+        "runtime"
+                "strings"
+                "github.com/spf13/cobra"
 	"github.com/nathfavour/anyisland/internal/pal"
 	"github.com/nathfavour/anyisland/internal/registry"
 	"github.com/nathfavour/anyisland/internal/cli"
@@ -731,66 +730,31 @@ var (
 		},
 	}
 
-	                                                        versionCmd = &cobra.Command{
-
-	                                                                Use:   "version",
-
-	                                                                Short: "Print detailed version information",
-
-	                                                                Run: func(cmd *cobra.Command, args []string) {
-
-	                                                                        commit := cli.Commit
-
-	                                                                        if commit == "none" {
-
-	                                                                                // Attempt to get local git commit if we are in a dev environment
-
-	                                                                                gitCmd := exec.Command("git", "rev-parse", "HEAD")
-
-	                                                                                if out, err := gitCmd.Output(); err == nil {
-
-	                                                                                        commit = strings.TrimSpace(string(out)) + " (local)"
-
-	                                                                                }
-
-	                                                                        }
-
-	                        
-
-	                                                                                                                                                                        fmt.Println("🏝️ Anyisland - Detailed Version Information")
-
-	                        
-
-	                                                                                                                                                                        fmt.Println("─────────────────────────────────────────────")
-
-	                        
-
-	                                                                                                                                                                        fmt.Printf("Version:    %s\n", cli.Version)
-
-	                        
-
-	                                                                                                                                                                        fmt.Printf("Commit:     %s\n", commit)
-
-	                        
-
-	                                                                                                                                                                        fmt.Printf("Built:      %s\n", cli.GetEffectiveBuildTime())
-
-	                        
-
-	                                                                                                                                                                        fmt.Printf("Platform:   %s/%s\n", runtime.GOOS, runtime.GOARCH)
-
-	                        
-
-	                                                                                                                                                                        fmt.Printf("Compiler:   %s\n", runtime.Version())
-
-	                        
-
-	                                                                                                                                                                },
-
-	                        
-
-	                                                                                                                                                        }
-
+	                                                                                                                        versionCmd = &cobra.Command{
+	                                                        
+	                                                                                                                                Use:   "version",
+	                                                        
+	                                                                                                                                Short: "Print detailed version information",
+	                                                        
+	                                                                                                                                Run: func(cmd *cobra.Command, args []string) {
+	                                                        
+	                                                                                                                                        fmt.Println("🏝️ Anyisland - Detailed Version Information")
+	                                                        
+	                                                                                                                                        fmt.Println("─────────────────────────────────────────────")
+	                                                        
+	                                                                                                                                        fmt.Printf("Version:    %s\n", cli.Version)
+	                                                        
+	                                                                                                                                        fmt.Printf("Commit:     %s\n", cli.GetEffectiveCommit())
+	                                                        
+	                                                                                                                                        fmt.Printf("Built:      %s\n", cli.GetEffectiveBuildTime())
+	                                                        
+	                                                                                                                                        fmt.Printf("Platform:   %s/%s\n", runtime.GOOS, runtime.GOARCH)
+	                                                        
+	                                                                                                                                        fmt.Printf("Compiler:   %s\n", runtime.Version())
+	                                                        
+	                                                                                                                                },
+	                                                        
+	                                                                                                                        }
 	                        
 
 	                                                                                                                        
