@@ -132,14 +132,12 @@ func (b *UpdateBroker) doPoll() {
 
 	for _, t := range tools {
 		// Logic to check remote version...
-		// If update found:
-		// b.notifySubscribers(t.Name, "vNewVersion")
-		fmt.Printf("[Broker] Polling for %s updates...
-", t.Name)
-	}
-}
-
-func (b *UpdateBroker) notifySubscribers(toolName, newVersion string) {
+				// If update found:
+				// b.notifySubscribers(t.Name, "vNewVersion")
+				fmt.Printf("[Broker] Polling for %s updates...\n", t.Name)
+			}
+		}
+		func (b *UpdateBroker) notifySubscribers(toolName, newVersion string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
