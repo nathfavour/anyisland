@@ -133,6 +133,18 @@ Anyisland provides high-performance support for the Rust ecosystem.
 
 ---
 
+## First-Class Python Support
+
+Anyisland provides robust management for the Python ecosystem, focusing on isolation and ease of use.
+
+1. **Automatic Detection**: Recognizes Python projects via `pyproject.toml`, `setup.py`, or `requirements.txt`.
+2. **Isolated Virtual Environments**: Every Python tool is installed into its own dedicated `venv` within an isolated application directory. This prevents "dependency hell" and ensures tools don't conflict with each other or the system Python.
+3. **Automated Installation**: Anyisland handles the creation of the venv and runs `pip install` automatically.
+4. **Environment Activation**: Use the **`anyisland shell <tool>`** command to enter a subshell with the tool's virtual environment fully activated. This is useful for debugging or running secondary scripts included in the package.
+5. **Seamless CLI Wrappers**: Anyisland creates wrapper scripts that transparently use the venv's interpreter, making the tool feel like a native global binary.
+
+---
+
 #### How Anyisland Handles Installation
 1. **Build**: Runs `steps` in the source directory.
 2. **Locate**: Finds the binary at the path specified in `bin`.

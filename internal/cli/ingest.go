@@ -183,19 +183,43 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 
 	        
 
-	                // Rust-specific Pre-build check
+	                        // Rust-specific Pre-build check
 
 	        
 
-	                if plan.Toolchain == "rust" {
+	                
 
 	        
 
-	                        if _, err := exec.LookPath("cargo"); err != nil {
+	                        if plan.Toolchain == "rust" {
 
 	        
 
-	                                return fmt.Errorf("rust toolchain (cargo) required but not found in PATH")
+	                
+
+	        
+
+	                                if _, err := exec.LookPath("cargo"); err != nil {
+
+	        
+
+	                
+
+	        
+
+	                                        return fmt.Errorf("rust toolchain (cargo) required but not found in PATH")
+
+	        
+
+	                
+
+	        
+
+	                                }
+
+	        
+
+	                
 
 	        
 
@@ -203,15 +227,99 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 
 	        
 
-	                }
+	                
 
 	        
 
-	        
+	                
 
 	        
 
-	                for _, step := range plan.Steps {
+	                
+
+	        
+
+	                        // Python-specific Pre-build check
+
+	        
+
+	                
+
+	        
+
+	                        if plan.Toolchain == "python" {
+
+	        
+
+	                
+
+	        
+
+	                                if _, err := exec.LookPath("python3"); err != nil {
+
+	        
+
+	                
+
+	        
+
+	                                        if _, err := exec.LookPath("python"); err != nil {
+
+	        
+
+	                
+
+	        
+
+	                                                return fmt.Errorf("python3 or python required but not found in PATH")
+
+	        
+
+	                
+
+	        
+
+	                                        }
+
+	        
+
+	                
+
+	        
+
+	                                }
+
+	        
+
+	                
+
+	        
+
+	                        }
+
+	        
+
+	                
+
+	        
+
+	                
+
+	        
+
+	                
+
+	        
+
+	                        for _, step := range plan.Steps {
+
+	        
+
+	                
+
+	        
+
+	                
 
 	        
 
@@ -459,15 +567,113 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 
 	                                        }
 
-	                                        fmt.Printf("Created wrapper at %s\n", wrapperPath)
+	                                                        fmt.Printf("Created wrapper at %s\n", wrapperPath)
 
-	                                        return nil
+	                                                        return nil
 
-	                                }
+	                                                }
 
-	                        
+	                                        
 
-	                                if err := os.MkdirAll(targetDir, 0755); err != nil {
+	                                                if plan.Toolchain == "python" {
+
+	                                                        // Python projects live in their venv
+
+	                                                        appDir := filepath.Join(targetDir, m.Name+"-app")
+
+	                                                        _ = os.RemoveAll(appDir)
+
+	                                                        if err := os.MkdirAll(appDir, 0755); err != nil {
+
+	                                                                return fmt.Errorf("failed to create app directory: %w", err)
+
+	                                                        }
+
+	                                        
+
+	                                                        fmt.Printf("Deploying Python project to %s...\n", appDir)
+
+	                                                        cpCmd := exec.Command("cp", "-r", workDir+"/.", appDir)
+
+	                                                        if runtime.GOOS == "windows" {
+
+	                                                                cpCmd = exec.Command("xcopy", "/E", "/I", "/Y", workDir, appDir)
+
+	                                                        }
+
+	                                                        if err := cpCmd.Run(); err != nil {
+
+	                                                                return fmt.Errorf("failed to copy python project: %w", err)
+
+	                                                        }
+
+	                                        
+
+	                                                        // Heuristic to find the binary in venv/bin
+
+	                                                        venvBinDir := filepath.Join(appDir, "venv", "bin")
+
+	                                                        if runtime.GOOS == "windows" {
+
+	                                                                venvBinDir = filepath.Join(appDir, "venv", "Scripts")
+
+	                                                        }
+
+	                                        
+
+	                                                        entries, _ := os.ReadDir(venvBinDir)
+
+	                                                        binName := m.Name
+
+	                                                        // Look for an exact match or something that looks like the main script
+
+	                                                        for _, entry := range entries {
+
+	                                                                if strings.EqualFold(entry.Name(), m.Name) || strings.EqualFold(entry.Name(), m.Name+".exe") {
+
+	                                                                        binName = entry.Name()
+
+	                                                                        break
+
+	                                                                }
+
+	                                                        }
+
+	                                        
+
+	                                                        // Create wrapper script
+
+	                                                        wrapperPath := filepath.Join(targetDir, m.Name)
+
+	                                                        wrapperContent := fmt.Sprintf("#!/bin/bash\nexec %s/%s \"$@\"\n", venvBinDir, binName)
+
+	                                                        if runtime.GOOS == "windows" {
+
+	                                                                wrapperPath += ".bat"
+
+	                                                                wrapperContent = fmt.Sprintf("@echo off\n\"%%~dp0\\%s-app\\venv\\Scripts\\%s\" %%*\n", m.Name, binName)
+
+	                                                        }
+
+	                                        
+
+	                                                        if err := os.WriteFile(wrapperPath, []byte(wrapperContent), 0755); err != nil {
+
+	                                                                return fmt.Errorf("failed to create wrapper script: %w", err)
+
+	                                                        }
+
+	                                                        fmt.Printf("Created wrapper at %s\n", wrapperPath)
+
+	                                                        return nil
+
+	                                                }
+
+	                                        
+
+	                                                if err := os.MkdirAll(targetDir, 0755); err != nil {
+
+	                                        
 
 	                        
 
@@ -1055,7 +1261,15 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, error
 			
 						
 			
-														fmt.Println("Generating build plan via AI...")
+														// ... (logic to get files and readmeContent) ...
+
+		// Discretion Check
+		discretion := agent.AnalyzeDiscretion(files, readmeContent)
+		if !discretion.Allowed {
+			return nil, fmt.Errorf("Ingestion declined: %s", discretion.Reason)
+		}
+
+		fmt.Println("Generating build plan via AI...")
 			
 						
 			

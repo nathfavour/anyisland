@@ -271,39 +271,167 @@ var (
 		},
 	}
 
-	listCmd = &cobra.Command{
-		Use:   "list",
-		Short: "List registered tools",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			sys, err := pal.New()
-			if err != nil {
-				return err
-			}
-			reg, err := registry.Open(sys.GetIslandDir())
-			if err != nil {
-				return err
-			}
-			defer reg.Close()
+	        listCmd = &cobra.Command{
 
-			tools, err := reg.ListTools()
-			if err != nil {
-				return err
-			}
+	                Use:   "list",
 
-			if len(tools) == 0 {
-				fmt.Println("No tools registered.")
-				return nil
-			}
+	                Short: "List registered tools",
 
-			fmt.Println("Registered tools:")
-			for _, t := range tools {
-				fmt.Printf("- %s (%s) [%s]\n", t.Name, t.Version, t.Source)
-			}
-			return nil
-		},
-	}
+	                RunE: func(cmd *cobra.Command, args []string) error {
 
-	ingestCmd = &cobra.Command{
+	                        sys, err := pal.New()
+
+	                        if err != nil {
+
+	                                return err
+
+	                        }
+
+	                        reg, err := registry.Open(sys.GetIslandDir())
+
+	                        if err != nil {
+
+	                                return err
+
+	                        }
+
+	                        defer reg.Close()
+
+	
+
+	                        tools, err := reg.ListTools()
+
+	                        if err != nil {
+
+	                                return err
+
+	                        }
+
+	
+
+	                        if len(tools) == 0 {
+
+	                                fmt.Println("No tools registered.")
+
+	                                return nil
+
+	                        }
+
+	
+
+	                        fmt.Println("Registered tools:")
+
+	                        for _, t := range tools {
+
+	                                fmt.Printf("- %s (%s) [%s]\n", t.Name, t.Version, t.Source)
+
+	                        }
+
+	                        return nil
+
+	                },
+
+	        }
+
+	
+
+	        shellCmd = &cobra.Command{
+
+	                Use:   "shell [tool]",
+
+	                Short: "Enter the environment (venv, etc.) of an installed tool",
+
+	                Args:  cobra.ExactArgs(1),
+
+	                RunE: func(cmd *cobra.Command, args []string) error {
+
+	                        toolName := args[0]
+
+	                        sys, err := pal.New()
+
+	                        if err != nil {
+
+	                                return err
+
+	                        }
+
+	
+
+	                        appDir := filepath.Join(sys.GetIslandBinDir(), toolName+"-app")
+
+	                        if _, err := os.Stat(appDir); os.IsNotExist(err) {
+
+	                                return fmt.Errorf("app directory not found for %s", toolName)
+
+	                        }
+
+	
+
+	                        fmt.Printf("Entering environment for %s...\n", toolName)
+
+	                        fmt.Println("Type 'exit' to return to your normal shell.")
+
+	
+
+	                        shell := os.Getenv("SHELL")
+
+	                        if shell == "" {
+
+	                                shell = "/bin/bash"
+
+	                        }
+
+	
+
+	                        // Determine if it's a python venv
+
+	                        venvDir := filepath.Join(appDir, "venv")
+
+	                        if _, err := os.Stat(venvDir); err == nil {
+
+	                                venvBin := filepath.Join(venvDir, "bin")
+
+	                                if runtime.GOOS == "windows" {
+
+	                                        venvBin = filepath.Join(venvDir, "Scripts")
+
+	                                }
+
+	                                
+
+	                                os.Setenv("VIRTUAL_ENV", venvDir)
+
+	                                os.Setenv("PATH", venvBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	                        }
+
+	
+
+	                        // Start subshell
+
+	                        subShell := exec.Command(shell)
+
+	                        subShell.Dir = appDir
+
+	                        subShell.Stdin = os.Stdin
+
+	                        subShell.Stdout = os.Stdout
+
+	                        subShell.Stderr = os.Stderr
+
+	                        
+
+	                        return subShell.Run()
+
+	                },
+
+	        }
+
+	
+
+	        ingestCmd = &cobra.Command{
+
+	
 		Use:   "ingest [url]",
 		Short: "Ingest a tool from a GitHub URL",
 		Args:  cobra.MaximumNArgs(1),
@@ -653,6 +781,8 @@ func init() {
         rootCmd.AddCommand(initCmd)
 
         rootCmd.AddCommand(listCmd)
+
+        rootCmd.AddCommand(shellCmd)
 
         rootCmd.AddCommand(installCmd)
 
