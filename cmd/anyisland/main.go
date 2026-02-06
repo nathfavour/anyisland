@@ -83,22 +83,75 @@ var (
 		},
 	}
 
-	setupCmd = &cobra.Command{
-		Use:   "setup",
-		Short: "Initialize Anyisland environment",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			sys, err := pal.New()
-			if err != nil {
-				return err
-			}
-			if err := sys.InitFolders(); err != nil {
-				return err
-			}
-			if err := sys.InjectPath(); err != nil {
-				fmt.Printf("Warning: failed to inject PATH: %v\n", err)
-			}
+	        setupCmd = &cobra.Command{
 
-			// Initialize Master Key
+	                Use:   "setup",
+
+	                Short: "Initialize Anyisland environment",
+
+	                RunE: func(cmd *cobra.Command, args []string) error {
+
+	                        sys, err := pal.New()
+
+	                        if err != nil {
+
+	                                return err
+
+	                        }
+
+	                        if err := sys.InitFolders(); err != nil {
+
+	                                return err
+
+	                        }
+
+	
+
+	                        // Check if paths are already in session
+
+	                        binDir := sys.GetBinDir()
+
+	                        islandBinDir := sys.GetIslandBinDir()
+
+	                        
+
+	                        // We use the internal pal logic to check if injection is needed
+
+	                        fmt.Printf("Anyisland needs to add the following to your PATH:\n  - %s\n  - %s\n", binDir, islandBinDir)
+
+	                        fmt.Print("Would you like Anyisland to automate this for you? (y/N): ")
+
+	                        
+
+	                        var response string
+
+	                        fmt.Scanln(&response)
+
+	                        
+
+	                        if strings.ToLower(response) == "y" {
+
+	                                if err := sys.InjectPath(); err != nil {
+
+	                                        fmt.Printf("Warning: failed to inject PATH: %v\n", err)
+
+	                                } else {
+
+	                                        fmt.Println("✅ PATH updated in your shell configuration.")
+
+	                                }
+
+	                        } else {
+
+	                                fmt.Println("Skipping PATH injection. Please add the directories manually to your shell config.")
+
+	                        }
+
+	
+
+	                        // Initialize Master Key
+
+	
 			cm := crypto.NewManager(sys)
 			_, err = cm.GetEncryptionKey()
 			if err != nil {
