@@ -10,7 +10,8 @@ import (
 
 type Config struct {
 	Update struct {
-		AutoUpdate bool `json:"auto_update"`
+		AutoUpdate bool  `json:"auto_update"`
+		LastCheck  int64 `json:"last_check"`
 	} `json:"update"`
 }
 
