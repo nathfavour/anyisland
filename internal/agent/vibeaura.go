@@ -124,7 +124,7 @@ Structure:
 `, repoURL, strings.Join(files, "\n"), readme)
 
 	resp, err := v.query(ctx, prompt, "ask")
-// ... (rest of the function remains same but I'll provide the context)
+	// ... (rest of the function remains same but I'll provide the context)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ Structure:
 	}
 
 	var plan BuildPlan
-// ...
+	// ...
 	if err := json.Unmarshal([]byte(resp), &plan); err != nil {
 		return nil, fmt.Errorf("failed to parse build plan: %w\nRaw response: %s", err, resp)
 	}
@@ -163,11 +163,7 @@ func (v *VibeauraSynthesizer) RedactCommand(ctx context.Context, command string)
 
 }
 
-
-
 func (v *VibeauraSynthesizer) AnalyzeDiscretion(ctx context.Context, files []string, readme string) (*DiscretionResult, error) {
-
-
 
 	prompt := fmt.Sprintf(`You are an expert security and software auditor for "Anyisland".
 
@@ -255,12 +251,6 @@ README snippet:
 
 Return ONLY a JSON object: {"allowed": true/false, "reason": "concise explanation"}`, strings.Join(files, "\n"), readme)
 
-
-
-
-
-
-
 	resp, err := v.query(ctx, prompt, "plan")
 
 	if err != nil {
@@ -268,8 +258,6 @@ Return ONLY a JSON object: {"allowed": true/false, "reason": "concise explanatio
 		return nil, err
 
 	}
-
-
 
 	jsonStart := strings.Index(resp, "{")
 
@@ -283,8 +271,6 @@ Return ONLY a JSON object: {"allowed": true/false, "reason": "concise explanatio
 
 	resp = resp[jsonStart : jsonEnd+1]
 
-
-
 	var result DiscretionResult
 
 	if err := json.Unmarshal([]byte(resp), &result); err != nil {
@@ -297,47 +283,55 @@ Return ONLY a JSON object: {"allowed": true/false, "reason": "concise explanatio
 
 }
 
-
-
 func (v *VibeauraSynthesizer) DebugBuildFailure(ctx context.Context, log string, manifest interface{}) (string, error) {
 
 	manifestJSON, _ := json.MarshalIndent(manifest, "", "  ")
 
-	prompt := fmt.Sprintf(`The build for a tool failed. Analyze the error log and the manifest, then suggest a fix or explain the cause.
+	prompt := fmt.Sprintf(`The build for a tool failed. Analyze the error log and the current manifest.
+
+
+
+Explain WHY the build failed and suggest a specific fix.
+
+
+
+
+
+
 
 Manifest:
 
+
+
 %s
+
+
+
+
 
 
 
 Error Log:
 
+
+
 %s
 
 
 
-Provide a concise, helpful explanation and if possible, the corrected command or steps.`, string(manifestJSON), log)
 
 
 
-		return v.query(ctx, prompt, "plan")
 
+Return your analysis in a clear, human-readable format. If you suggest a change to the build steps, provide them clearly.`, string(manifestJSON), log)
 
+	return v.query(ctx, prompt, "plan")
 
-	}
+}
 
+func (v *VibeauraSynthesizer) DiscoverTool(ctx context.Context, query string) (string, error) {
 
-
-	
-
-
-
-	func (v *VibeauraSynthesizer) DiscoverTool(ctx context.Context, query string) (string, error) {
-
-
-
-		prompt := fmt.Sprintf(`The user is looking for a CLI tool for: "%s"
+	prompt := fmt.Sprintf(`The user is looking for a CLI tool for: "%s"
 
 
 
@@ -351,33 +345,15 @@ Provide a concise, helpful explanation and if possible, the corrected command or
 
 	If you are unsure, return "NONE".`, query)
 
+	return v.query(ctx, prompt, "ask")
 
+}
 
-	
+func (v *VibeauraSynthesizer) ExplainTool(ctx context.Context, name string, manifest interface{}, readme string) (string, error) {
 
+	manifestJSON, _ := json.MarshalIndent(manifest, "", "  ")
 
-
-		return v.query(ctx, prompt, "ask")
-
-
-
-	}
-
-
-
-	
-
-
-
-	func (v *VibeauraSynthesizer) ExplainTool(ctx context.Context, name string, manifest interface{}, readme string) (string, error) {
-
-
-
-		manifestJSON, _ := json.MarshalIndent(manifest, "", "  ")
-
-
-
-		prompt := fmt.Sprintf(`Provide a concise (max 5 lines) explanation of what the tool "%s" does and how to run it.
+	prompt := fmt.Sprintf(`Provide a concise (max 5 lines) explanation of what the tool "%s" does and how to run it.
 
 
 
@@ -407,18 +383,6 @@ Provide a concise, helpful explanation and if possible, the corrected command or
 
 	Focus on the primary command and its most common use case.`, name, string(manifestJSON), readme)
 
+	return v.query(ctx, prompt, "ask")
 
-
-	
-
-
-
-		return v.query(ctx, prompt, "ask")
-
-
-
-	}
-
-
-
-	
+}

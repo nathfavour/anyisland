@@ -32,8 +32,6 @@ type DiscretionResult struct {
 
 type HeuristicSynthesizer struct{}
 
-
-
 func (m *HeuristicSynthesizer) RedactCommand(ctx context.Context, command string) (string, error) {
 
 	// Simple local redaction
@@ -54,15 +52,11 @@ func (m *HeuristicSynthesizer) RedactCommand(ctx context.Context, command string
 
 }
 
-
-
 func (m *HeuristicSynthesizer) GenerateBuildPlan(ctx context.Context, repoURL string, files []string, readme string) (*BuildPlan, error) {
 	// If we've reached here, first-class detection in Ingestor failed.
 	// We'll return an error instead of an invalid build plan.
 	return nil, fmt.Errorf("heuristic could not determine build steps. please provide an anyisland.json in the repository")
 }
-
-
 
 func (m *HeuristicSynthesizer) SummarizeUpdates(ctx context.Context, commits []string) (string, error) {
 
@@ -76,8 +70,6 @@ func (m *HeuristicSynthesizer) SummarizeUpdates(ctx context.Context, commits []s
 
 }
 
-
-
 func (m *HeuristicSynthesizer) AnalyzeDiscretion(ctx context.Context, files []string, readme string) (*DiscretionResult, error) {
 
 	// Use the existing local discretion logic
@@ -88,52 +80,20 @@ func (m *HeuristicSynthesizer) AnalyzeDiscretion(ctx context.Context, files []st
 
 }
 
-
-
 func (m *HeuristicSynthesizer) DebugBuildFailure(ctx context.Context, log string, manifest interface{}) (string, error) {
-
-
 
 	return "Local Analysis: Build failed. Check the error log above for toolchain issues or missing dependencies.", nil
 
-
-
 }
-
-
-
-
-
-
 
 func (m *HeuristicSynthesizer) DiscoverTool(ctx context.Context, query string) (string, error) {
 
-
-
 	return "", fmt.Errorf("AI Discovery is unavailable. Please provide a full GitHub URL.")
 
-
-
 }
-
-
-
-
-
-
 
 func (m *HeuristicSynthesizer) ExplainTool(ctx context.Context, name string, manifest interface{}, readme string) (string, error) {
 
-
-
 	return fmt.Sprintf("Tool: %s. Documentation is available in the source repository.", name), nil
 
-
-
 }
-
-
-
-
-
-

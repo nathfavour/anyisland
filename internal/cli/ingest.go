@@ -191,6 +191,10 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 		}
 	}
 
+	if plan.Bin == "" {
+		return "", "", fmt.Errorf("build plan does not specify a binary ('bin') to install")
+	}
+
 	binPattern := filepath.Join(workDir, plan.Bin)
 	matches, err := filepath.Glob(binPattern)
 	srcBin := ""
@@ -450,7 +454,7 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 	}
 	if isRust {
 		return &Manifest{
-			Name: repo,
+			Name:    repo,
 			Version: "latest",
 			Build: agent.BuildPlan{
 				Toolchain: "rust",
