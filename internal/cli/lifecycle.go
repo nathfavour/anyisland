@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/nathfavour/anyisland/internal/pal"
@@ -90,4 +91,53 @@ func (m *LifecycleManager) SelfInstall() error {
 		Version: Version,
 		Commit:  Commit,
 	})
+}
+
+func (m *LifecycleManager) Rollback() error {
+	binDir := m.sys.GetBinDir()
+	anyislandPath := filepath.Join(binDir, "anyisland")
+	oldPath := anyislandPath + ".old"
+
+	if _, err := os.Stat(oldPath); os.IsNotExist(err) {
+		return fmt.Errorf("no rollback version found at %s", oldPath)
+	}
+
+	// Swap
+	tempPath := anyislandPath + ".tmp"
+	if err := os.Rename(anyislandPath, tempPath); err != nil {
+		return err
+	}
+	if err := os.Rename(oldPath, anyislandPath); err != nil {
+		os.Rename(tempPath, anyislandPath) // attempt recovery
+		return err
+	}
+	os.Remove(tempPath)
+
+	return m.LogEvent(LifecycleEvent{
+		Type:    "rollback",
+		Action:  "binary_swap",
+		Status:  "success",
+		Message: "Rolled back to previous version",
+	})
+}
+
+func (m *LifecycleManager) HotSwap() error {
+	exePath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	m.LogEvent(LifecycleEvent{
+		Type:    "update",
+		Action:  "hot_swap",
+		Status:  "success",
+		Message: "Performing hot-swap/exec",
+	})
+
+	// In a real scenario, we might pass a --resume-state flag
+	return syscallExec(exePath, os.Args, os.Environ())
+}
+
+func syscallExec(argv0 string, argv []string, envv []string) error {
+	return syscall.Exec(argv0, argv, envv)
 }
