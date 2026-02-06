@@ -31,6 +31,22 @@ func NewIngestor(ag agent.Synthesizer, sys pal.System) *Ingestor {
 	}
 }
 
+func (i *Ingestor) DiscoverLatestCommit(ctx context.Context, repoURL string) (string, error) {
+	repoURL = normalizeRepoURL(repoURL)
+	cmd := exec.CommandContext(ctx, "git", "ls-remote", repoURL, "HEAD")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch remote commit: %w", err)
+	}
+
+	parts := strings.Fields(string(output))
+	if len(parts) == 0 {
+		return "", fmt.Errorf("invalid ls-remote output")
+	}
+
+	return parts[0], nil
+}
+
 func (i *Ingestor) getSourcePath(repoURL string, pkgName string) string {
 	if _, err := os.Stat(repoURL); err == nil {
 		abs, _ := filepath.Abs(repoURL)

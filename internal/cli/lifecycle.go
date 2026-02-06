@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nathfavour/anyisland/internal/agent"
 	"github.com/nathfavour/anyisland/internal/pal"
 )
 
@@ -136,6 +137,30 @@ func (m *LifecycleManager) HotSwap() error {
 
 	// In a real scenario, we might pass a --resume-state flag
 	return syscallExec(exePath, os.Args, os.Environ())
+}
+
+func (m *LifecycleManager) CheckAnyislandUpdate(ctx context.Context, ag agent.Synthesizer) (string, bool, error) {
+	ingestor := NewIngestor(ag, m.sys)
+	repoURL := "https://github.com/nathfavour/anyisland"
+	
+	latestCommit, err := ingestor.DiscoverLatestCommit(ctx, repoURL)
+	if err != nil {
+		return "", false, err
+	}
+
+	if latestCommit == Commit && Commit != "none" {
+		return latestCommit, false, nil
+	}
+
+	m.LogEvent(LifecycleEvent{
+		Type:    "update",
+		Action:  "check",
+		Status:  "success",
+		Message: "New version discovered",
+		Commit:  latestCommit,
+	})
+
+	return latestCommit, true, nil
 }
 
 func syscallExec(argv0 string, argv []string, envv []string) error {

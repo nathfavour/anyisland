@@ -125,18 +125,54 @@ func (b *UpdateBroker) pollForUpdates(ctx context.Context) {
 }
 
 func (b *UpdateBroker) doPoll() {
+
 	tools, err := b.reg.ListTools()
+
 	if err != nil {
+
 		return
+
 	}
 
+
+
+	lm := NewLifecycleManager(b.sys)
+
+	ag := &agent.MockSynthesizer{} // Use a basic synthesizer for background polling
+
+
+
+	// Check Anyisland itself
+
+	latest, available, err := lm.CheckAnyislandUpdate(context.Background(), ag)
+
+	if err == nil && available {
+
+		fmt.Printf("[Broker] Pulse: Anyisland update available (%s)\n", latest[:7])
+
+		b.notifySubscribers("anyisland", latest)
+
+	}
+
+
+
 	for _, t := range tools {
-		// Logic to check remote version...
-				// If update found:
-				// b.notifySubscribers(t.Name, "vNewVersion")
-				fmt.Printf("[Broker] Polling for %s updates...\n", t.Name)
-			}
+
+		if t.Name == "anyisland" {
+
+			continue
+
 		}
+
+		// Logic to check remote version for other tools...
+
+		fmt.Printf("[Broker] Polling for %s updates...\n", t.Name)
+
+	}
+
+}
+
+
 		func (b *UpdateBroker) notifySubscribers(toolName, newVersion string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
