@@ -7,7 +7,11 @@
       "go build -v -o anyisland ./cmd/anyisland",
       "go build -v -o anyislandd ./cmd/anyislandd"
     ],
-    "bin": "anyisland"
-  },
-  "repository": "github.com/nathfavour/anyisland"
-}
+        "bin": "anyisland"
+      },
+      "runtime": {
+        "pulse": true
+      },
+      "repository": "github.com/nathfavour/anyisland"
+    }
+    

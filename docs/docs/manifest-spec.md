@@ -24,7 +24,8 @@ The `anyisland.json` file is the primary configuration for Anyisland-aware tools
   },
   "runtime": {
     "dependencies": ["curl", "git"],
-    "daemon": false
+    "daemon": false,
+    "pulse": true
   }
 }
 ```
@@ -40,6 +41,33 @@ The `anyisland.json` file is the primary configuration for Anyisland-aware tools
 | `description` | `string` | No | A short summary of what the tool does. |
 | `repository` | `string` | No | The canonical URL of the source code repository. |
 | `build` | `object` | **Yes** | Instructions on how to compile or prepare the tool's binary. |
+| `runtime` | `object` | No | Configuration for how the tool behaves on the host system. |
+
+---
+
+### The `runtime` Object
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `dependencies` | `array[string]` | System packages required for the tool to function. |
+| `daemon` | `boolean` | If true, Anyisland will treat this as a long-running service. |
+| `pulse` | `boolean` | If true, the tool is **Anyisland Pulse Aware** and can receive OTA update notifications from the local daemon. |
+
+---
+
+## Anyisland Pulse (OTA)
+
+"The Pulse" is a low-energy OTA communication channel between `anyislandd` and installed tools. 
+
+### How it Works
+1. **Centralized Polling**: `anyislandd` fetches update metadata for all registered tools in the background.
+2. **Local IPC**: Tools can query the local Unix Domain Socket at `~/.anyisland/anyisland.sock` to check for updates without touching the network.
+3. **Push Notifications**: Tools with `pulse: true` can subscribe to the socket to receive immediate push notifications when an update is available.
+
+### Why use Pulse?
+- **Zero Bandwidth**: Your tool doesn't need its own update-checking logic.
+- **Battery Efficient**: Consolidates network requests into a single background process.
+- **Privacy**: No independent tracking of tool usage by external servers.
 
 ---
 
