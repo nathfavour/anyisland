@@ -92,7 +92,7 @@ func (m *LifecycleManager) SelfInstall() error {
 	if err == nil {
 		defer reg.Close()
 		reg.RegisterTool(registry.Tool{
-			Name:        binName,
+			Name:        "anyisland",
 			Source:      "https://github.com/nathfavour/anyisland",
 			Version:     Version,
 			LastCommit:  Commit,
