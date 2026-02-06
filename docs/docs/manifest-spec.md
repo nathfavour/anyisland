@@ -50,11 +50,13 @@ The `build` object defines the lifecycle of the tool from source to executable.
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `steps` | `array[string]` | **Yes** | A sequence of shell commands to run in the root of the source directory. |
-| `bin` | `string` | **Yes** | The relative path to the final binary produced by the build steps. |
+| `bin` | `string` | **Yes** | The path to the produced binary **relative to the repository root**. This is the file Anyisland will pick up after the build steps finish. |
 | `install_dir` | `string` | No | An optional override for the installation path. Defaults to `~/.anyisland/bin/`. |
 
-#### How Build Steps Work
-Anyisland executes build steps in a transient, isolated environment. If any command in the `steps` array returns a non-zero exit code, the entire installation process is aborted to prevent system corruption.
+#### How Anyisland Handles Installation
+1. **Build**: Runs `steps` in the source directory.
+2. **Locate**: Finds the binary at the path specified in `bin`.
+3. **Deploy**: Copies the binary to `install_dir` (or the default system path).
 
 ---
 
