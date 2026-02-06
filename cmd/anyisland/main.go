@@ -353,11 +353,6 @@ var (
 )
 
 func getSynthesizer() agent.Synthesizer {
-	sys, err := pal.New()
-	if err != nil {
-		return &agent.MockSynthesizer{}
-	}
-
 	// Check if Vibeaura socket exists
 	home, _ := os.UserHomeDir()
 	socketPath := filepath.Join(home, ".vibeauracle", "vibeaura.sock")

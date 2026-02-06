@@ -109,8 +109,7 @@ Return ONLY a JSON object with the following structure:
   "steps": ["command1", "command2"],
   "bin": "binary_name"
 }
-Ensure the commands are safe and platform-agnostic where possible, or tailored for the current environment.`, repoURL, strings.Join(files, "
-"), readme)
+Ensure the commands are safe and platform-agnostic where possible, or tailored for the current environment.`, repoURL, strings.Join(files, "\n"), readme)
 
 	resp, err := v.query(ctx, prompt, "ask")
 	if err != nil {
@@ -127,22 +126,18 @@ Ensure the commands are safe and platform-agnostic where possible, or tailored f
 
 	var plan BuildPlan
 	if err := json.Unmarshal([]byte(resp), &plan); err != nil {
-		return nil, fmt.Errorf("failed to parse build plan: %w
-Raw response: %s", err, resp)
+		return nil, fmt.Errorf("failed to parse build plan: %w\nRaw response: %s", err, resp)
 	}
 
 	return &plan, nil
 }
 
 func (v *VibeauraSynthesizer) SummarizeUpdates(ctx context.Context, commits []string) (string, error) {
-	prompt := fmt.Sprintf("Summarize the following git commits into a human-readable changelog:
-%s", strings.Join(commits, "
-"))
+	prompt := fmt.Sprintf("Summarize the following git commits into a human-readable changelog:\n%s", strings.Join(commits, "\n"))
 	return v.query(ctx, prompt, "ask")
 }
 
 func (v *VibeauraSynthesizer) RedactCommand(ctx context.Context, command string) (string, error) {
-	prompt := fmt.Sprintf("Redact any sensitive information (API keys, passwords, PII) from this shell command. Return ONLY the redacted command:
-%s", command)
+	prompt := fmt.Sprintf("Redact any sensitive information (API keys, passwords, PII) from this shell command. Return ONLY the redacted command:\n%s", command)
 	return v.query(ctx, prompt, "ask")
 }
