@@ -159,7 +159,7 @@ func (b *UpdateBroker) doPoll() {
 
 	if err == nil && available {
 
-		fmt.Printf("[Broker] Pulse: Anyisland update available (%s)\n", latest[:7])
+		fmt.Printf("[Broker] Pulse: Anyisland update available (%s)\n", ShortCommit(latest))
 
 		b.notifySubscribers("anyisland", latest)
 
