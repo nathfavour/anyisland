@@ -16,6 +16,7 @@ type System interface {
 	InitFolders() error
 	GetIslandDir() string
 	GetBinDir() string
+	GetIslandBinDir() string
 	GetDataDir() string
 	GetCacheDir() string
 	GetSourceDir() string
@@ -23,7 +24,6 @@ type System interface {
 	EnsurePath() error
 	SecretStore() SecretStore
 }
-
 
 type BasePAL struct {
 	IslandDir string
@@ -36,6 +36,10 @@ func (p *BasePAL) GetIslandDir() string {
 func (p *BasePAL) GetBinDir() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".local", "bin")
+}
+
+func (p *BasePAL) GetIslandBinDir() string {
+	return filepath.Join(p.IslandDir, "bin")
 }
 
 func (p *BasePAL) GetDataDir() string {
@@ -53,6 +57,7 @@ func (p *BasePAL) GetSourceDir() string {
 func (p *BasePAL) InitFolders() error {
 	dirs := []string{
 		p.GetBinDir(),
+		p.GetIslandBinDir(),
 		p.GetDataDir(),
 		p.GetCacheDir(),
 		p.GetSourceDir(),

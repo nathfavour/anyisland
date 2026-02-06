@@ -29,42 +29,56 @@ func NewIngestor(ag agent.Synthesizer, sys pal.System) *Ingestor {
 }
 
 func (i *Ingestor) Build(ctx context.Context, plan *agent.BuildPlan, repoURL string) error {
-	absSource, _ := filepath.Abs(repoURL)
-	repoName := filepath.Base(absSource)
-	if repoName == "." || repoName == "/" {
-		repoName = "anyisland-local"
-	}
-	cloneDir := filepath.Join(i.sys.GetCacheDir(), repoName)
+	repoURL = normalizeRepoURL(repoURL)
+	var workDir string
 
+	if _, err := os.Stat(repoURL); err == nil {
+		// Local path: use it directly
+		workDir = repoURL
+		fmt.Printf("Using local source at %s\n", workDir)
+	} else {
+		// Remote: manage in SourceDir
+		parts := strings.Split(strings.TrimPrefix(repoURL, "https://github.com/"), "/")
+		if len(parts) < 2 {
+			return fmt.Errorf("invalid github URL: %s", repoURL)
+		}
+		repoPath := filepath.Join(parts...)
+		workDir = filepath.Join(i.sys.GetSourceDir(), repoPath)
 
-	// 1. Clone or Copy
-	fmt.Printf("Fetching %s...\n", repoURL)
-	if err := os.RemoveAll(cloneDir); err != nil {
-		return err
-	}
-
-	source := repoURL
-	if !strings.HasPrefix(source, "http") && !strings.HasPrefix(source, "git@") {
-		// Assume local if it doesn't look like a URL
-		if _, err := os.Stat(source); err == nil {
-			source, _ = filepath.Abs(source)
+		if _, err := os.Stat(filepath.Join(workDir, ".git")); os.IsNotExist(err) {
+			fmt.Printf("Cloning %s to %s...\n", repoURL, workDir)
+			if err := os.MkdirAll(filepath.Dir(workDir), 0755); err != nil {
+				return err
+			}
+			cmd := exec.CommandContext(ctx, "git", "clone", repoURL, workDir)
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("git clone failed: %w", err)
+			}
 		} else {
-			source = "https://" + source
+			fmt.Printf("Updating %s in %s...\n", repoURL, workDir)
+			// Efficient update using fetch + reset --hard to origin/master or main
+			fetchCmd := exec.CommandContext(ctx, "git", "-C", workDir, "fetch", "origin")
+			if err := fetchCmd.Run(); err != nil {
+				return fmt.Errorf("git fetch failed: %w", err)
+			}
+
+			// Try to reset to origin/master or origin/main
+			resetCmd := exec.CommandContext(ctx, "git", "-C", workDir, "reset", "--hard", "origin/master")
+			if err := resetCmd.Run(); err != nil {
+				resetCmd = exec.CommandContext(ctx, "git", "-C", workDir, "reset", "--hard", "origin/main")
+				if err := resetCmd.Run(); err != nil {
+					return fmt.Errorf("git reset failed: %w", err)
+				}
+			}
 		}
 	}
-
-	cmd := exec.CommandContext(ctx, "git", "clone", source, cloneDir)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("git clone failed from %s: %w", source, err)
-	}
-
 
 	// 2. Execute build steps
 	for _, step := range plan.Steps {
 		fmt.Printf("Executing: %s\n", step)
 		args := strings.Fields(step)
 		buildCmd := exec.CommandContext(ctx, args[0], args[1:]...)
-		buildCmd.Dir = cloneDir
+		buildCmd.Dir = workDir
 		buildCmd.Stdout = os.Stdout
 		buildCmd.Stderr = os.Stderr
 		if err := buildCmd.Run(); err != nil {
@@ -73,8 +87,14 @@ func (i *Ingestor) Build(ctx context.Context, plan *agent.BuildPlan, repoURL str
 	}
 
 	// 3. Move binary
-	srcBin := filepath.Join(cloneDir, plan.Bin)
-	dstBin := filepath.Join(i.sys.GetBinDir(), plan.Bin)
+	srcBin := filepath.Join(workDir, plan.Bin)
+	
+	targetDir := i.sys.GetIslandBinDir()
+	if plan.Bin == "anyisland" || plan.Bin == "anyislandd" {
+		targetDir = i.sys.GetBinDir()
+	}
+	
+	dstBin := filepath.Join(targetDir, plan.Bin)
 	fmt.Printf("Installing %s to %s...\n", srcBin, dstBin)
 	
 	// Handle "text file busy" by renaming existing binary first

@@ -11,13 +11,17 @@ type LinuxPAL struct {
 }
 
 func (p *LinuxPAL) InjectPath() error {
-	return injectPathToConfig(p.GetBinDir())
+	if err := injectPathToConfig(p.GetBinDir()); err != nil {
+		return err
+	}
+	return injectPathToConfig(p.GetIslandBinDir())
 }
 
 func (p *LinuxPAL) EnsurePath() error {
 	binDir := p.GetBinDir()
-	if !verifyPathInSession(binDir) {
-		fmt.Printf("⚠️  Warning: %s is not in your current PATH.\n", binDir)
+	islandBinDir := p.GetIslandBinDir()
+	if !verifyPathInSession(binDir) || !verifyPathInSession(islandBinDir) {
+		fmt.Printf("⚠️  Warning: %s or %s is not in your current PATH.\n", binDir, islandBinDir)
 		fmt.Println("👉 Please restart your shell or run: source <your-shell-rc-file>")
 	}
 	return nil

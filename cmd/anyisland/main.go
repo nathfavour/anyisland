@@ -15,6 +15,8 @@ import (
 )
 
 var (
+	sourceFlag string
+
 	rootCmd = &cobra.Command{
 		Use:   "anyisland",
 		Short: "Anyisland is an AI-powered package manager",
@@ -128,9 +130,18 @@ var (
 	installCmd = &cobra.Command{
 		Use:   "install [url]",
 		Short: "Install a tool from a GitHub URL or local path",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			url := args[0]
+			url := ""
+			if len(args) > 0 {
+				url = args[0]
+			}
+			if sourceFlag != "" {
+				url = sourceFlag
+			}
+			if url == "" {
+				return fmt.Errorf("must provide a URL or use --source")
+			}
 			sys, err := pal.New()
 			if err != nil {
 				return err
@@ -211,9 +222,18 @@ var (
 	ingestCmd = &cobra.Command{
 		Use:   "ingest [url]",
 		Short: "Ingest a tool from a GitHub URL",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			url := args[0]
+			url := ""
+			if len(args) > 0 {
+				url = args[0]
+			}
+			if sourceFlag != "" {
+				url = sourceFlag
+			}
+			if url == "" {
+				return fmt.Errorf("must provide a URL or use --source")
+			}
 			sys, err := pal.New()
 			if err != nil {
 				return err
@@ -260,8 +280,8 @@ var (
 	}
 
 	updateCmd = &cobra.Command{
-		Use:   "update",
-		Short: "Update Anyisland itself",
+		Use:   "update [tool]",
+		Short: "Update tools or Anyisland itself",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			sys, err := pal.New()
 			if err != nil {
@@ -279,32 +299,54 @@ var (
 				return err
 			}
 
-			var self *registry.Tool
-			for _, t := range tools {
-				if t.Name == "anyisland" {
-					self = &t
-					break
+			var toUpdate []registry.Tool
+			if len(args) > 0 {
+				target := args[0]
+				for _, t := range tools {
+					if t.Name == target {
+						toUpdate = append(toUpdate, t)
+						break
+					}
+				}
+				if len(toUpdate) == 0 {
+					return fmt.Errorf("tool %s not found in registry", target)
+				}
+			} else {
+				// Default to updating anyisland if no args
+				for _, t := range tools {
+					if t.Name == "anyisland" {
+						toUpdate = append(toUpdate, t)
+						break
+					}
+				}
+				if len(toUpdate) == 0 {
+					return fmt.Errorf("anyisland not found in registry; please run 'anyisland install nathfavour/anyisland' first")
 				}
 			}
 
-			if self == nil {
-				return fmt.Errorf("anyisland not found in registry; please run 'anyisland ingest github.com/nathfavour/anyisland' first")
-			}
-
-			fmt.Printf("Updating Anyisland from %s...\n", self.Source)
 			ag := &agent.MockSynthesizer{}
 			ingestor := cli.NewIngestor(ag, sys)
 
-			plan, err := ingestor.Ingest(cmd.Context(), self.Source)
-			if err != nil {
-				return err
+			for _, t := range toUpdate {
+				source := t.Source
+				if sourceFlag != "" && len(toUpdate) == 1 {
+					source = sourceFlag
+				}
+				fmt.Printf("Updating %s from %s...\n", t.Name, source)
+				
+				plan, err := ingestor.Ingest(cmd.Context(), source)
+				if err != nil {
+					fmt.Printf("Error ingesting %s: %v\n", t.Name, err)
+					continue
+				}
+
+				if err := ingestor.Build(cmd.Context(), plan, source); err != nil {
+					fmt.Printf("Error building %s: %v\n", t.Name, err)
+					continue
+				}
+				fmt.Printf("%s updated successfully!\n", t.Name)
 			}
 
-			if err := ingestor.Build(cmd.Context(), plan, self.Source); err != nil {
-				return err
-			}
-
-			fmt.Println("\nAnyisland updated successfully!")
 			return nil
 		},
 	}
@@ -318,6 +360,7 @@ func main() {
 }
 
 func init() {
+	rootCmd.PersistentFlags().StringVarP(&sourceFlag, "source", "s", "", "Override source URL or local path")
 
 	rootCmd.AddCommand(setupCmd)
 

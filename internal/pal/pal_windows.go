@@ -14,20 +14,34 @@ type WindowsPAL struct {
 
 func (p *WindowsPAL) InjectPath() error {
 	binDir := p.GetBinDir()
+	islandBinDir := p.GetIslandBinDir()
 	path := os.Getenv("PATH")
-	if strings.Contains(path, binDir) {
+	
+	newPath := path
+	changed := false
+	if !strings.Contains(path, binDir) {
+		newPath = binDir + ";" + newPath
+		changed = true
+	}
+	if !strings.Contains(path, islandBinDir) {
+		newPath = islandBinDir + ";" + newPath
+		changed = true
+	}
+
+	if !changed {
 		return nil
 	}
 
 	// Use setx to permanently update PATH
-	cmd := exec.Command("setx", "PATH", path+";"+binDir)
+	cmd := exec.Command("setx", "PATH", newPath)
 	return cmd.Run()
 }
 
 func (p *WindowsPAL) EnsurePath() error {
 	binDir := p.GetBinDir()
-	if !verifyPathInSession(binDir) {
-		fmt.Printf("⚠️  Warning: %s is not in your current PATH.\n", binDir)
+	islandBinDir := p.GetIslandBinDir()
+	if !verifyPathInSession(binDir) || !verifyPathInSession(islandBinDir) {
+		fmt.Printf("⚠️  Warning: %s or %s is not in your current PATH.\n", binDir, islandBinDir)
 		fmt.Println("👉 You may need to restart your terminal or computer for environment changes to take effect.")
 	}
 	return nil
