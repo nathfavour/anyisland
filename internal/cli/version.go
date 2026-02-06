@@ -2,9 +2,11 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 )
 
 var (
@@ -13,6 +15,21 @@ var (
 	BuildTime = "unknown"
 	GoVersion = runtime.Version()
 )
+
+func GetEffectiveBuildTime() string {
+	if BuildTime != "unknown" {
+		return BuildTime
+	}
+	// Fallback: Get the executable's mod time as a heuristic for build time
+	exe, err := os.Executable()
+	if err == nil {
+		info, err := os.Stat(exe)
+		if err == nil {
+			return info.ModTime().Format(time.RFC3339) + " (approx)"
+		}
+	}
+	return "unknown"
+}
 
 func GetEffectiveCommit() string {
 	if Commit != "none" {
@@ -32,6 +49,8 @@ func VersionString() string {
 	if Commit == "none" && commit != "none" {
 		commit += " (local)"
 	}
-	return fmt.Sprintf("anyisland\nCommit: %s\nPlatform: %s/%s\nCompiler: %s", 
-		commit, runtime.GOOS, runtime.GOARCH, GoVersion)
+	buildTime := GetEffectiveBuildTime()
+	
+	return fmt.Sprintf("anyisland %s\nCommit: %s\nBuilt: %s\nPlatform: %s/%s\nCompiler: %s", 
+		Version, commit, buildTime, runtime.GOOS, runtime.GOARCH, GoVersion)
 }
