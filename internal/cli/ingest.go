@@ -309,15 +309,121 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 
 	                        }
 
-	                        fmt.Printf("Created wrapper at %s\n", wrapperPath)
+	                                        fmt.Printf("Created wrapper at %s\n", wrapperPath)
 
-	                        return nil
+	                                        return nil
 
-	                }
+	                                }
 
-	        
+	                        
 
-	                if err := os.MkdirAll(targetDir, 0755); err != nil {
+	                                if plan.Toolchain == "node" {
+
+	                                        // Node.js projects need their node_modules and package.json
+
+	                                        appDir := filepath.Join(targetDir, m.Name+"-app")
+
+	                                        _ = os.RemoveAll(appDir)
+
+	                                        if err := os.MkdirAll(appDir, 0755); err != nil {
+
+	                                                return fmt.Errorf("failed to create app directory: %w", err)
+
+	                                        }
+
+	                        
+
+	                                        fmt.Printf("Deploying Node.js project to %s...\n", appDir)
+
+	                                        cpCmd := exec.Command("cp", "-r", workDir+"/.", appDir)
+
+	                                        if runtime.GOOS == "windows" {
+
+	                                                cpCmd = exec.Command("xcopy", "/E", "/I", "/Y", workDir, appDir)
+
+	                                        }
+
+	                                        if err := cpCmd.Run(); err != nil {
+
+	                                                return fmt.Errorf("failed to copy node project: %w", err)
+
+	                                        }
+
+	                        
+
+	                                        // Try to find the entry point in package.json
+
+	                                        pkgData, err := os.ReadFile(filepath.Join(appDir, "package.json"))
+
+	                                        var binScript string
+
+	                                        if err == nil {
+
+	                                                var pkg struct {
+
+	                                                        Bin map[string]string `json:"bin"`
+
+	                                                }
+
+	                                                if err := json.Unmarshal(pkgData, &pkg); err == nil && len(pkg.Bin) > 0 {
+
+	                                                        // Just pick the first one if multiple are defined
+
+	                                                        for _, script := range pkg.Bin {
+
+	                                                                binScript = script
+
+	                                                                break
+
+	                                                        }
+
+	                                                }
+
+	                                        }
+
+	                        
+
+	                                        if binScript == "" {
+
+	                                                binScript = "index.js" // fallback
+
+	                                        }
+
+	                        
+
+	                                        // Create wrapper script
+
+	                                        wrapperPath := filepath.Join(targetDir, m.Name)
+
+	                                        wrapperContent := fmt.Sprintf("#!/bin/bash\nnode %s/%s \"$@\"\n", appDir, binScript)
+
+	                                        if runtime.GOOS == "windows" {
+
+	                                                wrapperPath += ".bat"
+
+	                                                wrapperContent = fmt.Sprintf("@echo off\nnode %%~dp0\\%s-app\\%s %%*\n", m.Name, binScript)
+
+	                                        }
+
+	                        
+
+	                                        if err := os.WriteFile(wrapperPath, []byte(wrapperContent), 0755); err != nil {
+
+	                                                return fmt.Errorf("failed to create wrapper script: %w", err)
+
+	                                        }
+
+	                                        fmt.Printf("Created wrapper at %s\n", wrapperPath)
+
+	                                        return nil
+
+	                                }
+
+	                        
+
+	                                if err := os.MkdirAll(targetDir, 0755); err != nil {
+
+	                        
 
 	        
 		return fmt.Errorf("failed to create target directory: %w", err)
@@ -593,21 +699,105 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, error
 							return nil, fmt.Errorf("flutter build not supported on %s", targetOS)
 						}
 			
-						return &Manifest{
-							Name:    repo,
-							Version: "latest",
-							Build: agent.BuildPlan{
-								Toolchain: "flutter",
-								Steps: []string{
-									"flutter pub get",
-									buildCmd,
-								},
-								Bin: binPath, // For Flutter, we treat the whole bundle as the "binary"
-							},
-						}, nil
-					}
+									return &Manifest{
 			
-					fmt.Println("Generating build plan via AI...")
+										Name:    repo,
+			
+										Version: "latest",
+			
+										Build: agent.BuildPlan{
+			
+											Toolchain: "flutter",
+			
+											Steps: []string{
+			
+												"flutter pub get",
+			
+												buildCmd,
+			
+											},
+			
+											Bin: binPath, // For Flutter, we treat the whole bundle as the "binary"
+			
+										},
+			
+									}, nil
+			
+								}
+			
+						
+			
+								// First-class Node.js/TS support
+			
+								isNode := false
+			
+								isTS := false
+			
+								for _, f := range files {
+			
+									if f == "package.json" {
+			
+										isNode = true
+			
+									}
+			
+									if f == "tsconfig.json" {
+			
+										isTS = true
+			
+									}
+			
+								}
+			
+						
+			
+								if isNode {
+			
+									fmt.Println("detected Node.js project, optimizing build plan...")
+			
+									steps := []string{"npm install"}
+			
+									if isTS {
+			
+										fmt.Println("detected TypeScript, adding build step...")
+			
+										steps = append(steps, "npm run build")
+			
+									} else {
+			
+										// Check for build script in package.json (simplified heuristic)
+			
+										steps = append(steps, "npm run build --if-present")
+			
+									}
+			
+						
+			
+									return &Manifest{
+			
+										Name:    repo,
+			
+										Version: "latest",
+			
+										Build: agent.BuildPlan{
+			
+											Toolchain: "node",
+			
+											Steps:     steps,
+			
+											Bin:       ".", // For Node, we move the whole directory and find the bin in package.json
+			
+										},
+			
+									}, nil
+			
+								}
+			
+						
+			
+								fmt.Println("Generating build plan via AI...")
+			
+						
 				plan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
 	if err != nil {
 		return nil, err

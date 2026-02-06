@@ -80,7 +80,7 @@ The `build` object defines the lifecycle of the tool from source to executable.
 | `steps` | `array[string]` | **Yes** | A sequence of shell commands to run in the root of the source directory. |
 | `bin` | `string` | **Yes** | The path to the produced binary **relative to the repository root**. Supports glob patterns (e.g., `dist/*_linux_amd64/mytool`). |
 | `install_dir` | `string` | No | An optional override for the installation path. Defaults to `~/.anyisland/bin/`. |
-| `toolchain` | `string` | No | The required toolchain (e.g., `go`, `rust`). Anyisland will verify this exists before building. |
+| `toolchain` | `string` | No | The required toolchain (e.g., `go`, `rust`, `flutter`). Anyisland will verify this exists before building. |
 
 ---
 
@@ -92,6 +92,33 @@ Anyisland treats Go projects as primary citizens. When a `go.mod` file is detect
 2. **Build Optimization**: It defaults to optimized build steps like `go build -v`.
 3. **GoReleaser Integration**: If a `.goreleaser.yaml` is found, Anyisland can use `goreleaser build --snapshot --single-target` to produce the binary, ensuring that all metadata and build flags defined by the author are respected.
 4. **Glob Pattern Matching**: The `bin` field supports glob patterns to easily locate binaries in complex output structures like those produced by GoReleaser (e.g., `dist/mytool_*/mytool`).
+
+---
+
+## First-Class Flutter Support
+
+Anyisland provides advanced support for Flutter codebases, enabling the seamless installation of both CLI and GUI applications.
+
+1. **Automatic Detection**: When a `pubspec.yaml` is found, Anyisland automatically identifies the project as a Flutter project.
+2. **Adaptive Builds**: It triggers the correct build command for your host architecture (e.g., `flutter build linux --release`).
+3. **Bundle Management**: Flutter desktop apps require a "bundle" containing assets and dynamic libraries. Anyisland handles this by:
+    - Moving the entire release bundle to an isolated application directory.
+    - Resolving internal linking by preserving the bundle's directory structure.
+4. **Wrapper Generation**: Anyisland generates a platform-specific wrapper script (bash or .bat) in your main `bin` directory. This wrapper ensures the application starts in the correct context, allowing GUI apps to find their `data/` and `lib/` folders perfectly.
+
+---
+
+## First-Class Node.js/TypeScript Support
+
+Anyisland provides optimized support for the JavaScript and TypeScript ecosystem.
+
+1. **Automatic Detection**: When a `package.json` file is found, Anyisland identifies the project as Node.js.
+2. **TypeScript Awareness**: If a `tsconfig.json` is present, it automatically adds an `npm run build` step to the build plan.
+3. **Dependency Management**: Anyisland runs `npm install` during the build phase to ensure all dependencies are resolved.
+4. **Isolated Deployment**: To prevent dependency conflicts and "missing module" errors, Anyisland:
+    - Moves the entire project (including `node_modules`) to an isolated application directory.
+    - Automatically identifies the correct entry point by parsing the `bin` field in `package.json`.
+5. **Node Wrapper**: It generates a wrapper script that invokes the local `node` runtime on the correct entry point, ensuring your JS/TS tools run perfectly from your global `PATH`.
 
 ---
 
