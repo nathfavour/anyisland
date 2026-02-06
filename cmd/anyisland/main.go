@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"strings"
-
+        "fmt"
+        "os"
+        "path/filepath"
+        "strings"
 	"github.com/spf13/cobra"
 	"github.com/nathfavour/anyisland/internal/pal"
 	"github.com/nathfavour/anyisland/internal/registry"
@@ -49,7 +49,7 @@ var (
 				return err
 			}
 			fullCmd := strings.Join(args, " ")
-			ag := &agent.MockSynthesizer{}
+			ag := getSynthesizer()
 			mgr := history.NewManager(sys, ag)
 
 			if err := mgr.SyncCommand(cmd.Context(), fullCmd); err != nil {
@@ -68,7 +68,7 @@ var (
 			if err != nil {
 				return err
 			}
-			ag := &agent.MockSynthesizer{}
+			ag := getSynthesizer()
 			mgr := history.NewManager(sys, ag)
 
 			lines, err := mgr.GetHistory()
@@ -147,7 +147,7 @@ var (
 				return err
 			}
 
-			ag := &agent.MockSynthesizer{}
+			ag := getSynthesizer()
 			ingestor := cli.NewIngestor(ag, sys)
 
 			plan, err := ingestor.Ingest(cmd.Context(), url)
@@ -239,7 +239,7 @@ var (
 				return err
 			}
 
-			ag := &agent.MockSynthesizer{}
+			ag := getSynthesizer()
 			ingestor := cli.NewIngestor(ag, sys)
 
 			plan, err := ingestor.Ingest(cmd.Context(), url)
@@ -324,7 +324,7 @@ var (
 				}
 			}
 
-			ag := &agent.MockSynthesizer{}
+			ag := getSynthesizer()
 			ingestor := cli.NewIngestor(ag, sys)
 
 			for _, t := range toUpdate {
@@ -352,13 +352,28 @@ var (
 	}
 )
 
+func getSynthesizer() agent.Synthesizer {
+	sys, err := pal.New()
+	if err != nil {
+		return &agent.MockSynthesizer{}
+	}
+
+	// Check if Vibeaura socket exists
+	home, _ := os.UserHomeDir()
+	socketPath := filepath.Join(home, ".vibeauracle", "vibeaura.sock")
+	if _, err := os.Stat(socketPath); err == nil {
+		return agent.NewVibeauraSynthesizer()
+	}
+
+	return &agent.MockSynthesizer{}
+}
+
 func main() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
-
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&sourceFlag, "source", "s", "", "Override source URL or local path")
 
