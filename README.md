@@ -8,30 +8,38 @@ AI-powered, platform-agnostic, and decentralized package manager.
 curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install.sh | bash
 ```
 
+## Documentation
+
+Full documentation is available at [nathfavour.github.io/anyisland/](https://nathfavour.github.io/anyisland/).
+
+- **[Architecture](https://nathfavour.github.io/anyisland/docs/architecture)**
+- **[CLI Reference](https://nathfavour.github.io/anyisland/docs/cli)**
+- **[Security & Privacy](https://nathfavour.github.io/anyisland/docs/security)**
+- **[Distribution Guide](https://nathfavour.github.io/anyisland/docs/distribution)**
+
 ## Quick Start
 
-### 1. Initialize
-Set up the environment and inject Anyisland into your PATH.
+### 1. Installation
 ```bash
-go run ./cmd/anyisland/main.go init
+curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install.sh | bash
 ```
 
-### 2. Start the Daemon
-The daemon listens for "Anyisland-aware" tools and manages the registry.
+### 2. Setup
+Initialize your local Island and configure your PATH.
 ```bash
-go run ./cmd/anyislandd/main.go
+anyisland setup
 ```
 
 ### 3. Ingest a Tool
 Transform any GitHub repository into an installed tool via AI analysis.
 ```bash
-go run ./cmd/anyisland/main.go ingest github.com/user/repo
+anyisland ingest github.com/user/repo
 ```
 
 ### 4. List Tools
 See what's installed and managed.
 ```bash
-go run ./cmd/anyisland/main.go list
+anyisland list
 ```
 
 ## Architecture

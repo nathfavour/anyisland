@@ -4,46 +4,67 @@ sidebar_position: 2
 
 # Architecture
 
-Anyisland operates as a distributed system composed of a CLI, a background Daemon, and an AI Engine. It treats the host OS as a generic runtime, installing all tools and configurations into a user-space "Island" directory.
+Anyisland is designed as a distributed user-space system. It treats the host Operating System as a raw runtime, providing a unified layer for tool management, environment synchronization, and secure data logging.
 
 ## Core Components
 
-### The CLI (`anyisland`)
-The primary interface for user interaction. It is a stateless binary responsible for:
-- **Ingestion:** Accepting GitHub URLs and triggering the AI analysis flow.
-- **Manual Management:** Standard install, update, and remove commands.
-- **Environment Injection:** Managing the user's PATH and shell aliases across different platforms (Windows, macOS, Linux).
+### 1. The CLI (`anyisland`)
+The primary entry point for users. It is a stateless binary that orchestrates high-level operations:
+- **Environment Management:** Injects and verifies PATH configurations using the Platform Abstraction Layer (PAL).
+- **Tool Ingestion:** Interfaces with the AI Synthesizer to generate build plans for unknown repositories.
+- **Registry Interaction:** Communicates with the local SQLite registry to track installed tools.
+- **History Recording:** Provides hooks for shell history capture and redaction.
 
-### The Island Daemon (`anyislandd`)
-A low-resource background process that acts as the "brain" of the machine.
-- **Discovery Server:** Listens for UDP heartbeats on port 1995 from "Anyisland-aware" tools.
-- **Registry Manager:** Maintains a local database (`island.db`) of all registered tools, their versions, and their GitHub sources.
-- **Auto-Updater:** Periodically checks for updates via the AI Engine and performs background fetches/builds.
+### 2. The Island Daemon (`anyislandd`)
+A long-running background process that manages the "state" of the Island:
+- **Discovery (UDP :1995):** Listens for "Anyisland-aware" tools that announce themselves via a lightweight UDP heartbeat.
+- **Background Updates:** Periodically checks for tool updates and manages background builds.
+- **Registry Integrity:** Ensures the `island.db` remains consistent with the actual filesystem state.
 
-### The AI Synthesizer (Agent)
-A module that interfaces with LLMs (local via Ollama or remote via Gemini/OpenAI).
-- **Documentation Parser:** Reads READMEs/Manifests to determine build steps for unknown repositories.
-- **Platform Translator:** Converts generic build instructions into platform-specific commands.
-- **Update Summarizer:** Generates human-readable changelogs from git commits.
-- **Privacy Firewall:** Scans shell history for secrets and redacts them before synchronization.
+### 3. The AI Synthesizer (Agent)
+A sophisticated module that provides "intelligence" to the system:
+- **Source Analysis:** Parses file trees and READMEs to determine build requirements (e.g., detecting Go, Rust, or C projects).
+- **Privacy Firewall:** A regex and LLM-based filter that identifies sensitive data (API keys, passwords) in shell commands and redacts them.
+- **Platform Translation:** Maps generic build steps to platform-specific equivalents.
 
-## Data Architecture
+## Security Model
 
-### Directory Structure
-- `~/.local/bin/`: User-local binaries (system PATH).
-- `~/.anyisland/`:
-    - `data/`: Git-synced configurations and JSON manifests.
-    - `cache/`: Temporary source code clones and build artifacts.
-    - `history/`: Encrypted and redacted shell history logs.
-    - `island.db`: Local registry of registered/discovered tools.
-    - `secrets.enc`: Encrypted environment variables.
+Anyisland employs a tiered security architecture to protect user data:
 
-## Execution Logic (The Ingestion Flow)
+### Tier 1: Platform Keyring
+Wherever possible, Anyisland uses native system keyrings to store the Master Encryption Key:
+- **Linux:** Secret Service (via DBus).
+- **macOS:** Keychain.
+- **Windows:** Credential Manager.
 
-1. **Input:** User provides a GitHub URL.
-2. **Inspection:** Anyisland fetches the file tree.
-    - **Path A:** If `anyisland.json` exists, follow explicit instructions.
-    - **Path B:** If not, pass README.md and file list to AI Synthesizer.
-3. **Plan Generation:** AI returns a JSON "Build Plan" (e.g., `go build -o anyisland`).
-4. **Verification:** User approves the AI-generated plan.
-5. **Provisioning:** Anyisland executes the build/download, moves the binary to `~/.anyisland/bin`, and registers it in `island.db`.
+### Tier 2: User Passphrase
+If a platform keyring is unavailable, Anyisland prompts for a Master Passphrase, which is used to derive encryption keys for the local database and history logs.
+
+### Tier 3: E2EE Synchronization
+All data intended for synchronization (like shell history) is encrypted locally using **AES-256-GCM** before being committed to the Git-synced `data/` directory.
+
+## Data Layout
+
+All Anyisland data resides in `~/.anyisland/`:
+
+| Directory | Purpose |
+| :--- | :--- |
+| `bin/` | Executables managed by Anyisland (User-space PATH). |
+| `data/` | Git-tracked metadata, manifests, and encrypted logs. |
+| `cache/` | Temporary build artifacts and source clones. |
+| `source/` | Persistent source code for tools installed from source. |
+| `island.db` | SQLite database tracking all registered tools. |
+
+## The Discovery Protocol
+
+Anyisland-aware tools can register themselves automatically by sending a JSON packet over UDP to `localhost:1995`:
+
+```json
+{
+  "op": "REGISTER",
+  "name": "my-tool",
+  "source": "github.com/org/repo",
+  "version": "v1.2.3",
+  "type": "binary"
+}
+```

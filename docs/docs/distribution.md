@@ -2,56 +2,76 @@
 sidebar_position: 3
 ---
 
-# Distribution for Developers
+# Distribution & Integration
 
-Third-party developers can set up their tools for distribution via Anyisland by providing an `anyisland.json` manifest.
+Anyisland allows developers to distribute their tools effortlessly and integrate them deeply into the user's sovereign environment.
 
-## Creating a Manifest
+## 1. Creating a Manifest (`anyisland.json`)
 
-The `anyisland.json` file should be placed in the root of your repository. It tells Anyisland how to build and install your tool.
+The manifest is the source of truth for Anyisland. Placing this file in your repository's root allows Anyisland to skip AI analysis and follow your explicit instructions.
 
-### Manifest Structure
+### Schema Definition
 
 ```json
 {
-  "name": "your-tool-name",
+  "name": "tool-name",
   "version": "1.0.0",
   "build": {
     "steps": [
-      "go build -o your-tool ."
+      "go build -o mytool ."
     ],
-    "bin": "your-tool",
-    "install_dir": "/usr/local/bin"
+    "bin": "mytool",
+    "install_dir": "/custom/path"
   }
 }
 ```
 
-- `name`: The name of your tool.
-- `version`: The current version of your tool.
-- `build`:
-    - `steps`: A list of shell commands required to build your tool from source.
-    - `bin`: The relative path to the resulting binary after the build steps are executed.
-    - `install_dir`: (Optional) The preferred absolute path where the binary should be installed. If omitted, Anyisland will install it in `~/.anyisland/bin`.
+#### Field Reference
+- **`name`**: The unique identifier for your tool.
+- **`version`**: The current semantic version.
+- **`build.steps`**: An array of shell commands executed sequentially in the source root.
+- **`build.bin`**: The relative path to the resulting executable after build steps finish.
+- **`build.install_dir`** *(Optional)*: An absolute path if you want to override the default `~/.anyisland/bin` location.
 
-## Official Packages
+---
 
-If you want your tool to be part of the official Anyisland package set, you can contribute a manifest to the `packages/official` directory in the Anyisland repository.
+## 2. Anyisland-Aware Tools
 
-Each official package has its own directory:
-`packages/official/{package-name}/anyisland.json`
+Tools can integrate with the Anyisland ecosystem to enable features like auto-discovery and state management.
 
-## Anyisland-Aware Tools
+### Auto-Registration
+A tool can register itself with the local Anyisland daemon (`anyislandd`) by sending a UDP packet to port `1995`.
 
-Tools can become "Anyisland-aware" by registering themselves with the Anyisland daemon via UDP heartbeats. This allows for automated discovery and management.
+**Example (Go):**
+```go
+import (
+    "net"
+    "encoding/json"
+)
 
-Example registration heartbeat (UDP port 1995):
-
-```json
-{
-  "op": "REGISTER",
-  "name": "aware-tool",
-  "source": "github.com/user/repo",
-  "version": "v1.0.0",
-  "type": "binary"
+func Register() {
+    packet := map[string]string{
+        "op":      "REGISTER",
+        "name":    "my-tool",
+        "source":  "github.com/me/my-tool",
+        "version": "v1.0.0",
+        "type":    "binary",
+    }
+    data, _ := json.Marshal(packet)
+    conn, _ := net.Dial("udp", "localhost:1995")
+    conn.Write(data)
 }
 ```
+
+---
+
+## 3. Contributing Official Packages
+
+Anyisland maintains a set of "Official Packages" for common utilities. These manifests are stored in the core repository under `packages/official/`.
+
+To contribute:
+1. Fork the Anyisland repository.
+2. Create `packages/official/<name>/anyisland.json`.
+3. Submit a Pull Request.
+
+Official packages are prioritized by the `anyisland install` command and are verified for platform compatibility.
