@@ -137,13 +137,23 @@ func (b *UpdateBroker) doPoll() {
 
 
 
-	lm := NewLifecycleManager(b.sys)
-
-	ag := &agent.MockSynthesizer{} // Use a basic synthesizer for background polling
+		lm := NewLifecycleManager(b.sys)
 
 
 
-	// Check Anyisland itself
+		ag := &agent.HeuristicSynthesizer{} // Use local heuristics for background polling
+
+
+
+	
+
+
+
+		// Check Anyisland itself
+
+
+
+	
 
 	latest, available, err := lm.CheckAnyislandUpdate(context.Background(), ag)
 

@@ -25,43 +25,82 @@ type DiscretionResult struct {
 	Reason  string `json:"reason"`
 }
 
-// MockSynthesizer is a temporary implementation for testing.
-type MockSynthesizer struct{}
+// HeuristicSynthesizer is a local fallback implementation.
 
-func (m *MockSynthesizer) RedactCommand(ctx context.Context, command string) (string, error) {
-	// Simple mock redaction: hide anything after an equals sign if it looks like a secret
+type HeuristicSynthesizer struct{}
+
+
+
+func (m *HeuristicSynthesizer) RedactCommand(ctx context.Context, command string) (string, error) {
+
+	// Simple local redaction
+
 	if strings.Contains(command, "KEY") || strings.Contains(command, "PASSWORD") || strings.Contains(command, "SECRET") {
+
 		parts := strings.SplitN(command, "=", 2)
+
 		if len(parts) == 2 {
+
 			return parts[0] + "=[REDACTED]", nil
+
 		}
+
 	}
+
 	return command, nil
+
 }
 
 
-func (m *MockSynthesizer) GenerateBuildPlan(ctx context.Context, repoURL string, files []string, readme string) (*BuildPlan, error) {
-	if strings.Contains(repoURL, "anyisland") || repoURL == "." {
-		return &BuildPlan{
-			Steps: []string{"go build -o anyisland ./cmd/anyisland"},
-			Bin:   "anyisland",
-		}, nil
-	}
+
+func (m *HeuristicSynthesizer) GenerateBuildPlan(ctx context.Context, repoURL string, files []string, readme string) (*BuildPlan, error) {
+
+	// If we've reached here, first-class detection in Ingestor failed.
+
+	// We'll provide a very basic generic fallback.
+
 	return &BuildPlan{
-		Steps: []string{"go build -o tool ."},
+
+		Steps: []string{"# please manually edit anyisland.json - heuristic could not determine build steps"},
+
 		Bin:   "tool",
+
 	}, nil
+
 }
 
 
-func (m *MockSynthesizer) SummarizeUpdates(ctx context.Context, commits []string) (string, error) {
-	return "Fixed some bugs and added new features.", nil
+
+func (m *HeuristicSynthesizer) SummarizeUpdates(ctx context.Context, commits []string) (string, error) {
+
+	if len(commits) == 0 {
+
+		return "No changes.", nil
+
+	}
+
+	return strings.Join(commits, "\n"), nil
+
 }
 
-func (m *MockSynthesizer) AnalyzeDiscretion(ctx context.Context, files []string, readme string) (*DiscretionResult, error) {
-	return &DiscretionResult{Allowed: true, Reason: "Mock says yes"}, nil
+
+
+func (m *HeuristicSynthesizer) AnalyzeDiscretion(ctx context.Context, files []string, readme string) (*DiscretionResult, error) {
+
+	// Use the existing local discretion logic
+
+	res := AnalyzeDiscretion(files, readme)
+
+	return &res, nil
+
 }
 
-func (m *MockSynthesizer) DebugBuildFailure(ctx context.Context, log string, manifest interface{}) (string, error) {
-	return "Mock says: Check your toolchain and try again.", nil
+
+
+func (m *HeuristicSynthesizer) DebugBuildFailure(ctx context.Context, log string, manifest interface{}) (string, error) {
+
+	return "Local Analysis: Build failed. Check the error log above for toolchain issues or missing dependencies.", nil
+
 }
+
+

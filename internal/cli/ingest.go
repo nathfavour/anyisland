@@ -1004,7 +1004,12 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, error
 
 	plan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
 	if err != nil {
-		return nil, err
+		fmt.Printf("AI build plan generation failed (%v), falling back to basic heuristics...\n", err)
+		fallback := &agent.HeuristicSynthesizer{}
+		plan, err = fallback.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &Manifest{
