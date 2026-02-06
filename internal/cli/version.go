@@ -58,6 +58,13 @@ func GetEffectiveCommit() string {
 	return "none"
 }
 
+func ShortCommit(commit string) string {
+	if len(commit) > 7 {
+		return commit[:7]
+	}
+	return commit
+}
+
 func VersionString() string {
 	commit := GetEffectiveCommit()
 	buildTime := GetEffectiveBuildTime()

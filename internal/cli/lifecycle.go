@@ -200,7 +200,7 @@ func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Sy
 		return
 	}
 
-	fmt.Printf("🚀 New version found (%s). Auto-updating Anyisland...\n", latest[:7])
+	fmt.Printf("🚀 New version found (%s). Auto-updating Anyisland...\n", ShortCommit(latest))
 
 	// 3. Silent update
 	ingestor := NewIngestor(ag, m.sys)
