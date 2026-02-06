@@ -403,23 +403,48 @@ var (
 	                },
 	        }
 	
-	        updateCmd = &cobra.Command{
-	                Use:   "update [tool]",
-	                Short: "Update tools or Anyisland itself",
-	                RunE: func(cmd *cobra.Command, args []string) error {
-	                        sys, err := pal.New()
-	                        if err != nil {
-	                                return err
-	                        }
-	
-	                        if len(args) == 0 || args[0] == "anyisland" {
-	                                fmt.Println("Checking for Anyisland updates...")
-	                                // TODO: Implement binary update logic
-	                                fmt.Println("Already at latest version.")
+	                rollbackCmd = &cobra.Command{
+	                        Use:   "rollback",
+	                        Short: "Rollback to the previous version of Anyisland",
+	                        RunE: func(cmd *cobra.Command, args []string) error {
+	                                sys, err := pal.New()
+	                                if err != nil {
+	                                        return err
+	                                }
+	                                lm := cli.NewLifecycleManager(sys)
+	                                if err := lm.Rollback(); err != nil {
+	                                        return err
+	                                }
+	                                fmt.Println("Rollback successful.")
 	                                return nil
-	                        }
-	
-	                        reg, err := registry.Open(sys.GetIslandDir())
+	                        },
+	                }
+	        
+	                updateCmd = &cobra.Command{
+	                        Use:   "update [tool]",
+	                        Short: "Update tools or Anyisland itself",
+	                        RunE: func(cmd *cobra.Command, args []string) error {
+	                                sys, err := pal.New()
+	                                if err != nil {
+	                                        return err
+	                                }
+	        
+	                                if len(args) == 0 || args[0] == "anyisland" {
+	                                        fmt.Println("Checking for Anyisland updates...")
+	                                        // In a real scenario, we'd check remote version/checksum here
+	                                        
+	                                        // Simulation of backup for rollback demonstration
+	                                        binPath := filepath.Join(sys.GetBinDir(), "anyisland")
+	                                        os.Rename(binPath, binPath+".old")
+	                                        // Copy current to binPath as if it were a new download
+	                                        exePath, _ := os.Executable()
+	                                        data, _ := os.ReadFile(exePath)
+	                                        os.WriteFile(binPath, data, 0755)
+	        
+	                                        fmt.Println("Anyisland updated to latest version (simulated).")
+	                                        return nil
+	                                }
+	        	                        reg, err := registry.Open(sys.GetIslandDir())
 	                        if err != nil {
 	                                return err
 	                        }
@@ -515,6 +540,8 @@ func init() {
         rootCmd.AddCommand(historyCmd)
 
         rootCmd.AddCommand(updateCmd)
+
+        rootCmd.AddCommand(rollbackCmd)
 
         rootCmd.AddCommand(versionCmd)
 

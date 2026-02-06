@@ -3,7 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/nathfavour/anyisland/internal/cli"
 	"github.com/nathfavour/anyisland/internal/pal"
 	"github.com/nathfavour/anyisland/internal/registry"
 	"github.com/nathfavour/anyisland/pkg/discovery"
@@ -15,6 +19,18 @@ func main() {
 		log.Fatalf("failed to init pal: %v", err)
 	}
 
+	// Setup Signal Handling for Hot-Swap (SIGHUP)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGHUP)
+	go func() {
+		for range sigChan {
+			fmt.Println("Received SIGHUP, performing hot-swap...")
+			lm := cli.NewLifecycleManager(sys)
+			if err := lm.HotSwap(); err != nil {
+				fmt.Printf("Hot-swap failed: %v\n", err)
+			}
+		}
+	}()
 	reg, err := registry.Open(sys.GetIslandDir())
 	if err != nil {
 		log.Fatalf("failed to open registry: %v", err)
