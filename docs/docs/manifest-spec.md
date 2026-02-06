@@ -40,6 +40,7 @@ The `anyisland.json` file is the primary configuration for Anyisland-aware tools
 | `version` | `string` | **Yes** | Semantic version (e.g., `1.0.0`). Used for update tracking and rollbacks. |
 | `description` | `string` | No | A short summary of what the tool does. |
 | `repository` | `string` | No | The canonical URL of the source code repository. |
+| `install_dir` | `string` | No | Preferred installation path. Defaults to `~/.anyisland/bin/`. Can also be specified within the `build` object. |
 | `build` | `object` | **Yes** | Instructions on how to compile or prepare the tool's binary. |
 | `runtime` | `object` | No | Configuration for how the tool behaves on the host system. |
 

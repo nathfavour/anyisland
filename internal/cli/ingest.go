@@ -261,20 +261,15 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 
 	targetDir := ""
 
-	if plan.InstallDir != "" {
-
+	if m.InstallDir != "" {
+		targetDir = m.InstallDir
+	} else if plan.InstallDir != "" {
 		targetDir = plan.InstallDir
-
 	} else {
-
 		targetDir = i.sys.GetIslandBinDir()
-
 		if plan.Bin == "anyisland" || plan.Bin == "anyislandd" {
-
 			targetDir = i.sys.GetBinDir()
-
 		}
-
 	}
 
 	if plan.Toolchain == "flutter" {

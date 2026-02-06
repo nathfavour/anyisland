@@ -107,9 +107,10 @@ README:
 Return ONLY a JSON object with the following structure:
 {
   "steps": ["command1", "command2"],
-  "bin": "binary_name"
+  "bin": "binary_name",
+  "install_dir": "/optional/custom/path"
 }
-Ensure the commands are safe and platform-agnostic where possible, or tailored for the current environment.`, repoURL, strings.Join(files, "\n"), readme)
+Ensure the commands are safe and platform-agnostic where possible, or tailored for the current environment. If the tool is a system-level utility, consider suggesting a standard install_dir like /usr/local/bin.`, repoURL, strings.Join(files, "\n"), readme)
 
 	resp, err := v.query(ctx, prompt, "ask")
 	if err != nil {

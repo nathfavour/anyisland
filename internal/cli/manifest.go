@@ -7,10 +7,20 @@ import (
 	"github.com/nathfavour/anyisland/internal/agent"
 )
 
+type RuntimeConfig struct {
+	Dependencies []string `json:"dependencies,omitempty"`
+	Daemon       bool     `json:"daemon,omitempty"`
+	Pulse        bool     `json:"pulse,omitempty"`
+}
+
 type Manifest struct {
-	Name    string          `json:"name"`
-	Version string          `json:"version"`
-	Build   agent.BuildPlan `json:"build"`
+	Name        string          `json:"name"`
+	Version     string          `json:"version"`
+	Description string          `json:"description,omitempty"`
+	Repository  string          `json:"repository,omitempty"`
+	InstallDir  string          `json:"install_dir,omitempty"` // Root-level override for installation path
+	Build       agent.BuildPlan `json:"build"`
+	Runtime     *RuntimeConfig  `json:"runtime,omitempty"`
 }
 
 func LoadManifest(path string) (*Manifest, error) {
