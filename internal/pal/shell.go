@@ -110,6 +110,23 @@ func RemovePathFromConfig() error {
 }
 
 func verifyPathInSession(binDir string) bool {
+
 	path := os.Getenv("PATH")
-	return strings.Contains(path, binDir)
+
+	paths := filepath.SplitList(path)
+
+	target := filepath.Clean(binDir)
+
+	for _, p := range paths {
+
+		if filepath.Clean(p) == target {
+
+			return true
+
+		}
+
+	}
+
+	return false
+
 }

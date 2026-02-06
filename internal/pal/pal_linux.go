@@ -20,13 +20,27 @@ func (p *LinuxPAL) InjectPath() error {
 func (p *LinuxPAL) EnsurePath() error {
 	binDir := p.GetBinDir()
 	islandBinDir := p.GetIslandBinDir()
-	if !verifyPathInSession(binDir) || !verifyPathInSession(islandBinDir) {
-		fmt.Printf("⚠️  Warning: %s or %s is not in your current PATH.\n", binDir, islandBinDir)
+
+	binInPath := verifyPathInSession(binDir)
+	islandBinInPath := verifyPathInSession(islandBinDir)
+
+	if !binInPath || !islandBinInPath {
+		var missing []string
+		if !binInPath {
+			missing = append(missing, binDir)
+		}
+		if !islandBinInPath {
+			missing = append(missing, islandBinDir)
+		}
+
+		fmt.Printf("⚠️  Warning: The following directories are not in your PATH:\n")
+		for _, m := range missing {
+			fmt.Printf("   - %s\n", m)
+		}
 		fmt.Println("👉 Please restart your shell or run: source <your-shell-rc-file>")
 	}
 	return nil
 }
-
 func (p *LinuxPAL) SecretStore() SecretStore {
 	return &KeyringStore{}
 }
