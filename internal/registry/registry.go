@@ -42,6 +42,7 @@ func Open(islandDir string) (*Registry, error) {
 }
 
 func initSchema(db *sql.DB) error {
+	// 1. Create tables if they don't exist
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS tools (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,6 +66,46 @@ func initSchema(db *sql.DB) error {
 			return err
 		}
 	}
+
+	// 2. Migration: Add missing columns to existing tools table
+	columns := map[string]string{
+		"last_commit":  "TEXT",
+		"binary_hash":  "TEXT",
+		"install_path": "TEXT",
+	}
+
+	for col, colType := range columns {
+		// Check if column exists
+		query := fmt.Sprintf("PRAGMA table_info(tools)")
+		rows, err := db.Query(query)
+		if err != nil {
+			return err
+		}
+		
+		found := false
+		for rows.Next() {
+			var cid int
+			var name, ctype string
+			var notnull, pk int
+			var dflt_value interface{}
+			if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt_value, &pk); err != nil {
+				continue
+			}
+			if name == col {
+				found = true
+				break
+			}
+		}
+		rows.Close()
+
+		if !found {
+			alterQuery := fmt.Sprintf("ALTER TABLE tools ADD COLUMN %s %s", col, colType)
+			if _, err := db.Exec(alterQuery); err != nil {
+				return fmt.Errorf("failed to add column %s: %w", col, err)
+			}
+		}
+	}
+
 	return nil
 }
 
