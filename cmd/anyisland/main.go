@@ -213,66 +213,54 @@ var (
 				return err
 			}
 
-			ag := getSynthesizer()
-			ingestor := cli.NewIngestor(ag, sys)
-
-			                        manifest, err := ingestor.Ingest(cmd.Context(), url)
-
+			                        ag := getSynthesizer()
+			                        ingestor := cli.NewIngestor(ag, sys)
+			
+			                        manifest, commit, err := ingestor.Ingest(cmd.Context(), url)
 			                        if err != nil {
-
 			                                return err
-
 			                        }
-
 			
-
-			                        fmt.Println("\nProposed Build Plan:")
-
-			                        for _, step := range manifest.Build.Steps {
-
-			                                fmt.Printf("  - %s\n", step)
-
-			                        }
-
-			                        fmt.Printf("\nBinary target: %s\n", manifest.Build.Bin)
-
-			
-
-			                        fmt.Println("\nExecuting build...")
-
-			                        if err := ingestor.Build(cmd.Context(), manifest, url); err != nil {
-
-			                                return err
-
-			                        }
-
-			
-
 			                        reg, err := registry.Open(sys.GetIslandDir())
-
 			                        if err != nil {
-
 			                                return err
-
 			                        }
-
 			                        defer reg.Close()
-
 			
-
+			                        existing, _ := reg.GetTool(manifest.Name)
+			                        if existing != nil {
+			                                if existing.LastCommit == commit {
+			                                        if ingestor.VerifyToolIntegrity(existing.InstallPath, existing.BinaryHash) {
+			                                                fmt.Printf("%s is already up-to-date and healthy (commit: %s)\n", manifest.Name, commit[:7])
+			                                                return nil
+			                                        }
+			                                        fmt.Printf("%s seems broken. Reinstalling...\n", manifest.Name)
+			                                } else {
+			                                        fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, existing.LastCommit[:7], commit[:7])
+			                                }
+			                        }
+			
+			                        fmt.Println("\nProposed Build Plan:")
+			                        for _, step := range manifest.Build.Steps {
+			                                fmt.Printf("  - %s\n", step)
+			                        }
+			
+			                        fmt.Println("\nExecuting build...")
+			                        hash, installPath, err := ingestor.Build(cmd.Context(), manifest, url)
+			                        if err != nil {
+			                                return err
+			                        }
+			
 			                        err = reg.RegisterTool(registry.Tool{
-
-			                                Name:    manifest.Build.Bin,
-
-			                                Source:  url,
-
-			                                Version: manifest.Version,
-
-			                                Type:    "source",
-
+			                                Name:        manifest.Name,
+			                                Source:      url,
+			                                Version:     manifest.Version,
+			                                LastCommit:  commit,
+			                                BinaryHash:  hash,
+			                                InstallPath: installPath,
+			                                Type:        "source",
 			                        })
-
-			
+						
 			if err != nil {
 				return err
 			}
@@ -606,66 +594,54 @@ var (
 				return err
 			}
 
-			ag := getSynthesizer()
-			ingestor := cli.NewIngestor(ag, sys)
-
-			                        manifest, err := ingestor.Ingest(cmd.Context(), url)
-
+			                        ag := getSynthesizer()
+			                        ingestor := cli.NewIngestor(ag, sys)
+			
+			                        manifest, commit, err := ingestor.Ingest(cmd.Context(), url)
 			                        if err != nil {
-
 			                                return err
-
 			                        }
-
 			
-
-			                        fmt.Println("\nProposed Build Plan:")
-
-			                        for _, step := range manifest.Build.Steps {
-
-			                                fmt.Printf("  - %s\n", step)
-
-			                        }
-
-			                        fmt.Printf("\nBinary target: %s\n", manifest.Build.Bin)
-
-			
-
-			                        fmt.Println("\nExecuting build...")
-
-			                        if err := ingestor.Build(cmd.Context(), manifest, url); err != nil {
-
-			                                return err
-
-			                        }
-
-			
-
 			                        reg, err := registry.Open(sys.GetIslandDir())
-
 			                        if err != nil {
-
 			                                return err
-
 			                        }
-
 			                        defer reg.Close()
-
 			
-
+			                        existing, _ := reg.GetTool(manifest.Name)
+			                        if existing != nil {
+			                                if existing.LastCommit == commit {
+			                                        if ingestor.VerifyToolIntegrity(existing.InstallPath, existing.BinaryHash) {
+			                                                fmt.Printf("%s is already up-to-date and healthy (commit: %s)\n", manifest.Name, commit[:7])
+			                                                return nil
+			                                        }
+			                                        fmt.Printf("%s seems broken. Reinstalling...\n", manifest.Name)
+			                                } else {
+			                                        fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, existing.LastCommit[:7], commit[:7])
+			                                }
+			                        }
+			
+			                        fmt.Println("\nProposed Build Plan:")
+			                        for _, step := range manifest.Build.Steps {
+			                                fmt.Printf("  - %s\n", step)
+			                        }
+			
+			                        fmt.Println("\nExecuting build...")
+			                        hash, installPath, err := ingestor.Build(cmd.Context(), manifest, url)
+			                        if err != nil {
+			                                return err
+			                        }
+			
 			                        err = reg.RegisterTool(registry.Tool{
-
-			                                Name:    manifest.Build.Bin,
-
-			                                Source:  url,
-
-			                                Version: manifest.Version,
-
-			                                Type:    "source",
-
+			                                Name:        manifest.Name,
+			                                Source:      url,
+			                                Version:     manifest.Version,
+			                                LastCommit:  commit,
+			                                BinaryHash:  hash,
+			                                InstallPath: installPath,
+			                                Type:        "source",
 			                        })
-
-			
+						
 			if err != nil {
 				return err
 			}
@@ -815,27 +791,51 @@ var (
 	        
 	                                
 	        
-	                                                                // Perform the real update via Ingestor
-	        
-	                                                                ingestor := cli.NewIngestor(ag, sys)
-	        
-	                                                                manifest, err := ingestor.Ingest(cmd.Context(), "https://github.com/nathfavour/anyisland")
-	        
-	                                                                if err != nil {
-	        
-	                                                                        return err
-	        
-	                                                                }
+	                                                                                                                                        // Perform the real update via Ingestor
 	        
 	                                
 	        
-	                                                                fmt.Println("Downloading and building latest version...")
+	                                                                                                                                        ingestor := cli.NewIngestor(ag, sys)
 	        
-	                                                                if err := ingestor.Build(cmd.Context(), manifest, "https://github.com/nathfavour/anyisland"); err != nil {
+	                                
 	        
-	                                                                        return err
+	                                                                                                                                        manifest, _, err := ingestor.Ingest(cmd.Context(), "https://github.com/nathfavour/anyisland")
 	        
-	                                                                }
+	                                
+	        
+	                                                                                                                                        if err != nil {
+	        
+	                                
+	        
+	                                                                                                                                                return err
+	        
+	                                
+	        
+	                                                                                                                                        }
+	        
+	                                
+	        
+	                                                                
+	        
+	                                
+	        
+	                                                                                                                                        fmt.Println("Downloading and building latest version...")
+	        
+	                                
+	        
+	                                                                                                                                        if _, _, err := ingestor.Build(cmd.Context(), manifest, "https://github.com/nathfavour/anyisland"); err != nil {
+	        
+	                                
+	        
+	                                                                                                                                                return err
+	        
+	                                
+	        
+	                                                                                                                                        }
+	        
+	                                
+	        
+	                                                                
 	        
 	                                
 	        
@@ -879,29 +879,40 @@ var (
 	                                if sourceFlag != "" && len(toUpdate) == 1 {
 	                                      source = sourceFlag
 	                                }
-	                                fmt.Printf("Updating %s from %s...\n", t.Name, source)
-	
-	                                                                manifest, err := ingestor.Ingest(cmd.Context(), source)
-	
-	                                                                if err != nil {
-	
-	                                                                      fmt.Printf("Error ingesting %s: %v\n", t.Name, err)
-	
-	                                                                      continue
-	
-	                                                                }
-	
-	
-	
-	                                                                if err := ingestor.Build(cmd.Context(), manifest, source); err != nil {
-	
-	                                                                      fmt.Printf("Error building %s: %v\n", t.Name, err)
-	
-	                                                                      continue
-	
-	                                                                }
-	
-	
+	                                                                        fmt.Printf("Updating %s from %s...\n", t.Name, source)
+	                                
+	                                                                                                        manifest, commit, err := ingestor.Ingest(cmd.Context(), source)
+	                                
+	                                                                                                        if err != nil {
+	                                
+	                                                                                                              fmt.Printf("Error ingesting %s: %v\n", t.Name, err)
+	                                
+	                                                                                                              continue
+	                                
+	                                                                                                        }
+	                                
+	                                
+	                                
+	                                                                                                        hash, installPath, err := ingestor.Build(cmd.Context(), manifest, source)
+	                                
+	                                                                                                        if err != nil {
+	                                
+	                                                                                                              fmt.Printf("Error building %s: %v\n", t.Name, err)
+	                                
+	                                                                                                              continue
+	                                
+	                                                                                                        }
+	                                
+	                                                                                                        reg.RegisterTool(registry.Tool{
+	                                                                                                                Name:        manifest.Name,
+	                                                                                                                Source:      source,
+	                                                                                                                Version:     manifest.Version,
+	                                                                                                                LastCommit:  commit,
+	                                                                                                                BinaryHash:  hash,
+	                                                                                                                InstallPath: installPath,
+	                                                                                                                Type:        "source",
+	                                                                                                        })
+	                                	
 	                                fmt.Printf("%s updated successfully!\n", t.Name)
 	                        }
 	
