@@ -159,7 +159,7 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 		args := strings.Fields(step)
 
 		// Inject ldflags for Anyisland core components
-		if (m.Name == "anyisland" || m.Name == "anyislandd") && args[0] == "go" && (args[1] == "build" || args[1] == "install") {
+		if (m.Name == "anyisland") && args[0] == "go" && (args[1] == "build" || args[1] == "install") {
 			commit, _ := i.DiscoverLatestCommit(ctx, repoURL)
 			if commit == "" {
 				commit = "unknown"
@@ -211,10 +211,9 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 		targetDir = plan.InstallDir
 	} else {
 		targetDir = i.sys.GetIslandBinDir()
-		if plan.Bin == "anyisland" || plan.Bin == "anyislandd" {
-			targetDir = i.sys.GetBinDir()
-		}
-	}
+		if plan.Bin == "anyisland" {
+		                        targetDir = i.sys.GetBinDir()
+		                }	}
 
 	if plan.Toolchain == "flutter" {
 		appDir := filepath.Join(targetDir, m.Name+"-app")
