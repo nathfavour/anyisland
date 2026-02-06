@@ -13,6 +13,7 @@ curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install
 Full documentation is available at [nathfavour.github.io/anyisland/](https://nathfavour.github.io/anyisland/).
 
 - **[Architecture](https://nathfavour.github.io/anyisland/docs/architecture)**
+- **[System Lifecycle](https://nathfavour.github.io/anyisland/docs/lifecycle)**
 - **[CLI Reference](https://nathfavour.github.io/anyisland/docs/cli)**
 - **[Security & Privacy](https://nathfavour.github.io/anyisland/docs/security)**
 - **[Distribution Guide](https://nathfavour.github.io/anyisland/docs/distribution)**

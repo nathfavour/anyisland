@@ -15,6 +15,18 @@ const sidebars: SidebarsConfig = {
   tutorialSidebar: [
     {type: 'doc', id: 'intro', label: 'Introduction'},
     {type: 'doc', id: 'architecture', label: 'Architecture'},
+    {
+      type: 'category',
+      label: 'System Lifecycle',
+      items: [
+        'lifecycle/index',
+        'lifecycle/distribution',
+        'lifecycle/installation',
+        'lifecycle/updates',
+        'lifecycle/audit',
+        'lifecycle/removal',
+      ],
+    },
     {type: 'doc', id: 'distribution', label: 'Distribution & Integration'},
     {type: 'doc', id: 'security', label: 'Security & Privacy'},
     {type: 'doc', id: 'cli', label: 'CLI Reference'},
