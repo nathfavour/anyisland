@@ -117,7 +117,7 @@ func (r *Registry) RegisterTool(tool Tool) error {
 }
 
 func (r *Registry) GetTool(name string) (*Tool, error) {
-	query := `SELECT id, name, source, version, last_commit, binary_hash, install_path, type FROM tools WHERE name = ?`
+	query := `SELECT id, name, source, version, COALESCE(last_commit, ''), COALESCE(binary_hash, ''), COALESCE(install_path, ''), type FROM tools WHERE name = ?`
 	row := r.db.QueryRow(query, name)
 	var t Tool
 	err := row.Scan(&t.ID, &t.Name, &t.Source, &t.Version, &t.LastCommit, &t.BinaryHash, &t.InstallPath, &t.Type)
@@ -131,7 +131,8 @@ func (r *Registry) GetTool(name string) (*Tool, error) {
 }
 
 func (r *Registry) ListTools() ([]Tool, error) {
-	rows, err := r.db.Query("SELECT id, name, source, version, last_commit, binary_hash, install_path, type FROM tools")
+	query := `SELECT id, name, source, version, COALESCE(last_commit, ''), COALESCE(binary_hash, ''), COALESCE(install_path, ''), type FROM tools`
+	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
