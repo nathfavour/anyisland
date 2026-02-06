@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/google/go-github/v60/github"
@@ -182,39 +183,143 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 		}
 	}
 
-	        // 3. Move binary
+	                // 3. Move binary/bundle
 
-	        binPattern := filepath.Join(workDir, plan.Bin)
+	                binPattern := filepath.Join(workDir, plan.Bin)
 
-	        matches, err := filepath.Glob(binPattern)
+	                matches, err := filepath.Glob(binPattern)
 
-	        srcBin := ""
+	                srcBin := ""
 
-	        if err == nil && len(matches) > 0 {
+	                if err == nil && len(matches) > 0 {
 
-	                srcBin = matches[0] // Pick the first match
+	                        srcBin = matches[0] // Pick the first match
 
-	        } else {
+	                } else {
 
-	                srcBin = binPattern // Fallback to literal path
+	                        srcBin = binPattern // Fallback to literal path
 
-	        }
+	                }
 
-	
+	        
 
-	        targetDir := ""
+	                targetDir := ""
 
-	
-	if plan.InstallDir != "" {
-		targetDir = plan.InstallDir
-	} else {
-		targetDir = i.sys.GetIslandBinDir()
-		if plan.Bin == "anyisland" || plan.Bin == "anyislandd" {
-			targetDir = i.sys.GetBinDir()
-		}
-	}
-	
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	                if plan.InstallDir != "" {
+
+	                        targetDir = plan.InstallDir
+
+	                } else {
+
+	                        targetDir = i.sys.GetIslandBinDir()
+
+	                        if plan.Bin == "anyisland" || plan.Bin == "anyislandd" {
+
+	                                targetDir = i.sys.GetBinDir()
+
+	                        }
+
+	                }
+
+	        
+
+	                if plan.Toolchain == "flutter" {
+
+	                        // Flutter needs its entire bundle directory to run (data, lib, etc.)
+
+	                        // We install it to a subdirectory and create a wrapper script
+
+	                        appDir := filepath.Join(targetDir, m.Name+"-app")
+
+	                        _ = os.RemoveAll(appDir)
+
+	                        if err := os.MkdirAll(appDir, 0755); err != nil {
+
+	                                return fmt.Errorf("failed to create app directory: %w", err)
+
+	                        }
+
+	        
+
+	                        fmt.Printf("Deploying Flutter bundle to %s...\n", appDir)
+
+	                        // Use shell to copy directory contents
+
+	                        cpCmd := exec.Command("cp", "-r", srcBin+"/.", appDir)
+
+	                        if runtime.GOOS == "windows" {
+
+	                                cpCmd = exec.Command("xcopy", "/E", "/I", "/Y", srcBin, appDir)
+
+	                        }
+
+	                        if err := cpCmd.Run(); err != nil {
+
+	                                return fmt.Errorf("failed to copy flutter bundle: %w", err)
+
+	                        }
+
+	        
+
+	                        // Find the actual executable in the bundle
+
+	                        entries, _ := os.ReadDir(appDir)
+
+	                        exeName := m.Name
+
+	                        for _, entry := range entries {
+
+	                                if !entry.IsDir() && (entry.Type().IsRegular() || entry.Type() == 0) {
+
+	                                        // Basic heuristic: the binary usually has the project name or is the only non-extension file
+
+	                                        if !strings.Contains(entry.Name(), ".") {
+
+	                                                exeName = entry.Name()
+
+	                                                break
+
+	                                        }
+
+	                                }
+
+	                        }
+
+	        
+
+	                        // Create wrapper script in the main bin directory
+
+	                        wrapperPath := filepath.Join(targetDir, m.Name)
+
+	                        wrapperContent := fmt.Sprintf("#!/bin/bash\ncd %s && ./%s \"$@\"\n", appDir, exeName)
+
+	                        if runtime.GOOS == "windows" {
+
+	                                wrapperPath += ".bat"
+
+	                                wrapperContent = fmt.Sprintf("@echo off\ncd /d %%~dp0\\%s-app\nstart \"\" %s.exe %%*\n", m.Name, exeName)
+
+	                        }
+
+	        
+
+	                        if err := os.WriteFile(wrapperPath, []byte(wrapperContent), 0755); err != nil {
+
+	                                return fmt.Errorf("failed to create wrapper script: %w", err)
+
+	                        }
+
+	                        fmt.Printf("Created wrapper at %s\n", wrapperPath)
+
+	                        return nil
+
+	                }
+
+	        
+
+	                if err := os.MkdirAll(targetDir, 0755); err != nil {
+
+	        
 		return fmt.Errorf("failed to create target directory: %w", err)
 	}
 
@@ -432,35 +537,78 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, error
 				}
 			}
 	
-			if isGo {
-				fmt.Println("detected Go project, optimizing build plan...")
-				var steps []string
-				binName := repo
-				
-				if hasGoReleaser {
-					fmt.Println("found GoReleaser config, using goreleaser for build...")
-					steps = []string{"goreleaser build --snapshot --single-target --clean"}
-					// We assume binName stays same or we try to find it in dist/
-					binName = "dist/" + repo + "_*/" + repo 
-					// Note: Real implementation would parse .goreleaser.yaml to find the exact bin
-				} else {
-					steps = []string{"go build -v -o " + binName}
-				}
-	
-				return &Manifest{
-					Name:    repo,
-					Version: "latest",
-					Build: agent.BuildPlan{
-						Toolchain: "go",
-						Steps:     steps,
-						Bin:       binName,
-					},
-				}, nil
-			}
-	
-			fmt.Println("Generating build plan via AI...")
-	
-	plan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
+					if isGo {
+						fmt.Println("detected Go project, optimizing build plan...")
+						var steps []string
+						binName := repo
+						
+						if hasGoReleaser {
+							fmt.Println("found GoReleaser config, using goreleaser for build...")
+							steps = []string{"goreleaser build --snapshot --single-target --clean"}
+							// We assume binName stays same or we try to find it in dist/
+							binName = "dist/" + repo + "_*/" + repo 
+							// Note: Real implementation would parse .goreleaser.yaml to find the exact bin
+						} else {
+							steps = []string{"go build -v -o " + binName}
+						}
+			
+						return &Manifest{
+							Name:    repo,
+							Version: "latest",
+							Build: agent.BuildPlan{
+								Toolchain: "go",
+								Steps:     steps,
+								Bin:       binName,
+							},
+						}, nil
+					}
+			
+					// First-class Flutter support
+					isFlutter := false
+					for _, f := range files {
+						if f == "pubspec.yaml" {
+							// We could read the file to be 100% sure, but pubspec.yaml is a very strong indicator
+							isFlutter = true
+							break
+						}
+					}
+			
+					if isFlutter {
+						fmt.Println("detected Flutter project, optimizing build plan...")
+						targetOS := runtime.GOOS
+						var buildCmd string
+						var binPath string
+			
+						switch targetOS {
+						case "linux":
+							buildCmd = "flutter build linux --release"
+							binPath = "build/linux/x64/release/bundle/"
+						case "darwin":
+							buildCmd = "flutter build macos --release"
+							binPath = "build/macos/Build/Products/Release/" // Simplified, usually .app
+						case "windows":
+							buildCmd = "flutter build windows --release"
+							binPath = "build/windows/runner/Release/"
+						default:
+							return nil, fmt.Errorf("flutter build not supported on %s", targetOS)
+						}
+			
+						return &Manifest{
+							Name:    repo,
+							Version: "latest",
+							Build: agent.BuildPlan{
+								Toolchain: "flutter",
+								Steps: []string{
+									"flutter pub get",
+									buildCmd,
+								},
+								Bin: binPath, // For Flutter, we treat the whole bundle as the "binary"
+							},
+						}, nil
+					}
+			
+					fmt.Println("Generating build plan via AI...")
+				plan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
 	if err != nil {
 		return nil, err
 	}
