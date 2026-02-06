@@ -16,6 +16,13 @@ type Synthesizer interface {
 	GenerateBuildPlan(ctx context.Context, repoURL string, files []string, readme string) (*BuildPlan, error)
 	SummarizeUpdates(ctx context.Context, commits []string) (string, error)
 	RedactCommand(ctx context.Context, command string) (string, error)
+	AnalyzeDiscretion(ctx context.Context, files []string, readme string) (*DiscretionResult, error)
+	DebugBuildFailure(ctx context.Context, log string, manifest interface{}) (string, error)
+}
+
+type DiscretionResult struct {
+	Allowed bool   `json:"allowed"`
+	Reason  string `json:"reason"`
 }
 
 // MockSynthesizer is a temporary implementation for testing.
@@ -49,4 +56,12 @@ func (m *MockSynthesizer) GenerateBuildPlan(ctx context.Context, repoURL string,
 
 func (m *MockSynthesizer) SummarizeUpdates(ctx context.Context, commits []string) (string, error) {
 	return "Fixed some bugs and added new features.", nil
+}
+
+func (m *MockSynthesizer) AnalyzeDiscretion(ctx context.Context, files []string, readme string) (*DiscretionResult, error) {
+	return &DiscretionResult{Allowed: true, Reason: "Mock says yes"}, nil
+}
+
+func (m *MockSynthesizer) DebugBuildFailure(ctx context.Context, log string, manifest interface{}) (string, error) {
+	return "Mock says: Check your toolchain and try again.", nil
 }

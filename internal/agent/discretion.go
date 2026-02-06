@@ -4,11 +4,6 @@ import (
 	"strings"
 )
 
-type DiscretionResult struct {
-	Allowed bool
-	Reason  string
-}
-
 func AnalyzeDiscretion(files []string, readme string) DiscretionResult {
 	// 1. Check for "Empty" or "Skeleton" repositories
 	if len(files) < 3 {

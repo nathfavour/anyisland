@@ -138,6 +138,95 @@ func (v *VibeauraSynthesizer) SummarizeUpdates(ctx context.Context, commits []st
 }
 
 func (v *VibeauraSynthesizer) RedactCommand(ctx context.Context, command string) (string, error) {
+
 	prompt := fmt.Sprintf("Redact any sensitive information (API keys, passwords, PII) from this shell command. Return ONLY the redacted command:\n%s", command)
+
 	return v.query(ctx, prompt, "ask")
+
+}
+
+
+
+func (v *VibeauraSynthesizer) AnalyzeDiscretion(ctx context.Context, files []string, readme string) (*DiscretionResult, error) {
+
+	prompt := fmt.Sprintf(`Analyze the following repository and decide if it is a functional CLI or GUI tool that should be installed.
+
+Files:
+
+%s
+
+
+
+README snippet:
+
+%.500s
+
+
+
+Return ONLY a JSON object: {"allowed": true/false, "reason": "why"}`, strings.Join(files, "\n"), readme)
+
+
+
+	resp, err := v.query(ctx, prompt, "plan")
+
+	if err != nil {
+
+		return nil, err
+
+	}
+
+
+
+	jsonStart := strings.Index(resp, "{")
+
+	jsonEnd := strings.LastIndex(resp, "}")
+
+	if jsonStart == -1 || jsonEnd == -1 {
+
+		return nil, fmt.Errorf("invalid AI response: could not find JSON object")
+
+	}
+
+	resp = resp[jsonStart : jsonEnd+1]
+
+
+
+	var result DiscretionResult
+
+	if err := json.Unmarshal([]byte(resp), &result); err != nil {
+
+		return nil, err
+
+	}
+
+	return &result, nil
+
+}
+
+
+
+func (v *VibeauraSynthesizer) DebugBuildFailure(ctx context.Context, log string, manifest interface{}) (string, error) {
+
+	manifestJSON, _ := json.MarshalIndent(manifest, "", "  ")
+
+	prompt := fmt.Sprintf(`The build for a tool failed. Analyze the error log and the manifest, then suggest a fix or explain the cause.
+
+Manifest:
+
+%s
+
+
+
+Error Log:
+
+%s
+
+
+
+Provide a concise, helpful explanation and if possible, the corrected command or steps.`, string(manifestJSON), log)
+
+
+
+	return v.query(ctx, prompt, "plan")
+
 }

@@ -193,18 +193,53 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 
 	}
 
-	for _, step := range plan.Steps {
+		for _, step := range plan.Steps {
 
-		fmt.Printf("Executing: %s\n", step)
-		args := strings.Fields(step)
-		buildCmd := exec.CommandContext(ctx, args[0], args[1:]...)
-		buildCmd.Dir = workDir
-		buildCmd.Stdout = os.Stdout
-		buildCmd.Stderr = os.Stderr
-		if err := buildCmd.Run(); err != nil {
-			return fmt.Errorf("build step failed: %w", err)
+			fmt.Printf("Executing: %s\n", step)
+
+			args := strings.Fields(step)
+
+			buildCmd := exec.CommandContext(ctx, args[0], args[1:]...)
+
+			buildCmd.Dir = workDir
+
+	
+
+			// Capture output for potential debugging
+
+			var combinedOutput strings.Builder
+
+			buildCmd.Stdout = io.MultiWriter(os.Stdout, &combinedOutput)
+
+			buildCmd.Stderr = io.MultiWriter(os.Stderr, &combinedOutput)
+
+	
+
+			if err := buildCmd.Run(); err != nil {
+
+				fmt.Println("\n❌ Build step failed.")
+
+				if v, ok := i.agent.(*agent.VibeauraSynthesizer); ok {
+
+					fmt.Println("Analyzing failure with AI...")
+
+					analysis, diagErr := v.DebugBuildFailure(ctx, combinedOutput.String(), m)
+
+					if diagErr == nil {
+
+						fmt.Printf("\nAI Analysis:\n%s\n", analysis)
+
+					}
+
+				}
+
+				return fmt.Errorf("build step failed: %w", err)
+
+			}
+
 		}
-	}
+
+	
 
 	// 3. Move binary/bundle
 
@@ -947,7 +982,20 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, error
 	// ... (logic to get files and readmeContent) ...
 
 	// Discretion Check
-	discretion := agent.AnalyzeDiscretion(files, readmeContent)
+	var discretion agent.DiscretionResult
+	if v, ok := i.agent.(*agent.VibeauraSynthesizer); ok {
+		fmt.Println("Performing AI-powered discretion check...")
+		res, err := v.AnalyzeDiscretion(ctx, files, readmeContent)
+		if err == nil {
+			discretion = *res
+		} else {
+			fmt.Printf("AI discretion check failed (%v), falling back to heuristics...\n", err)
+			discretion = agent.AnalyzeDiscretion(files, readmeContent)
+		}
+	} else {
+		discretion = agent.AnalyzeDiscretion(files, readmeContent)
+	}
+
 	if !discretion.Allowed {
 		return nil, fmt.Errorf("Ingestion declined: %s", discretion.Reason)
 	}
