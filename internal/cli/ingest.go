@@ -151,6 +151,10 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 	}
 
 	for _, step := range plan.Steps {
+		step = strings.TrimSpace(step)
+		if step == "" || strings.HasPrefix(step, "#") {
+			continue
+		}
 		fmt.Printf("Executing: %s\n", step)
 		args := strings.Fields(step)
 
