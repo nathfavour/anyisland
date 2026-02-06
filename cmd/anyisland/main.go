@@ -44,14 +44,13 @@ import (
 		                                                cm.Save(cfg)
 		                                        }
 		                
-		                                        // Seamless Auto-Update
-		                                        ag := getSynthesizer()
-		                                        lm := cli.NewLifecycleManager(sys)
-		                                        // Run in background to keep the CLI snappy, 
-		                                        // or run synchronously if you want to GUARANTEE latest on THIS run.
-		                                        // Given the "guaranteed" requirement, we'll do it synchronously but fast.
-		                                        lm.BackgroundAutoUpdate(cmd.Context(), ag)
-		                
+		                                                                                                // Seamless Auto-Update
+		                                                                                                ag := getSynthesizer()
+		                                                                                                lm := cli.NewLifecycleManager(sys)
+		                                                                                                // Skip auto-update if we are already running the update command
+		                                                                                                if cmd.Name() != "update" {
+		                                                                                                        lm.BackgroundAutoUpdate(cmd.Context(), ag)
+		                                                                                                }		                
 		                                        return sys.EnsurePath()
 		                                },
 		                        }
