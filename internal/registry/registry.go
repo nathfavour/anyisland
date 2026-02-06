@@ -9,11 +9,14 @@ import (
 )
 
 type Tool struct {
-	ID     int
-	Name   string
-	Source string
-	Version string
-	Type    string
+	ID          int
+	Name        string
+	Source      string
+	Version     string
+	LastCommit  string
+	BinaryHash  string
+	InstallPath string
+	Type        string
 }
 
 type Registry struct {
@@ -39,26 +42,55 @@ func Open(islandDir string) (*Registry, error) {
 }
 
 func initSchema(db *sql.DB) error {
-	query := `
-	CREATE TABLE IF NOT EXISTS tools (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT UNIQUE NOT NULL,
-		source TEXT NOT NULL,
-		version TEXT NOT NULL,
-		type TEXT NOT NULL
-	);`
-	_, err := db.Exec(query)
-	return err
+	queries := []string{
+		`CREATE TABLE IF NOT EXISTS tools (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT UNIQUE NOT NULL,
+			source TEXT NOT NULL,
+			version TEXT NOT NULL,
+			last_commit TEXT,
+			binary_hash TEXT,
+			install_path TEXT,
+			type TEXT NOT NULL
+		);`,
+		`CREATE TABLE IF NOT EXISTS tool_embeddings (
+			tool_id INTEGER PRIMARY KEY,
+			description TEXT,
+			vector BLOB,
+			FOREIGN KEY(tool_id) REFERENCES tools(id) ON DELETE CASCADE
+		);`,
+	}
+	for _, q := range queries {
+		if _, err := db.Exec(q); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *Registry) RegisterTool(tool Tool) error {
-	query := `INSERT OR REPLACE INTO tools (name, source, version, type) VALUES (?, ?, ?, ?)`
-	_, err := r.db.Exec(query, tool.Name, tool.Source, tool.Version, tool.Type)
+	query := `INSERT OR REPLACE INTO tools (name, source, version, last_commit, binary_hash, install_path, type) 
+	          VALUES (?, ?, ?, ?, ?, ?, ?)`
+	_, err := r.db.Exec(query, tool.Name, tool.Source, tool.Version, tool.LastCommit, tool.BinaryHash, tool.InstallPath, tool.Type)
 	return err
 }
 
+func (r *Registry) GetTool(name string) (*Tool, error) {
+	query := `SELECT id, name, source, version, last_commit, binary_hash, install_path, type FROM tools WHERE name = ?`
+	row := r.db.QueryRow(query, name)
+	var t Tool
+	err := row.Scan(&t.ID, &t.Name, &t.Source, &t.Version, &t.LastCommit, &t.BinaryHash, &t.InstallPath, &t.Type)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
 func (r *Registry) ListTools() ([]Tool, error) {
-	rows, err := r.db.Query("SELECT id, name, source, version, type FROM tools")
+	rows, err := r.db.Query("SELECT id, name, source, version, last_commit, binary_hash, install_path, type FROM tools")
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +99,7 @@ func (r *Registry) ListTools() ([]Tool, error) {
 	var tools []Tool
 	for rows.Next() {
 		var t Tool
-		if err := rows.Scan(&t.ID, &t.Name, &t.Source, &t.Version, &t.Type); err != nil {
+		if err := rows.Scan(&t.ID, &t.Name, &t.Source, &t.Version, &t.LastCommit, &t.BinaryHash, &t.InstallPath, &t.Type); err != nil {
 			return nil, err
 		}
 		tools = append(tools, t)

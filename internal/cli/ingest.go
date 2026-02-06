@@ -3,6 +3,8 @@ package cli
 import (
 	"archive/zip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -82,7 +84,7 @@ func (i *Ingestor) getSourcePath(repoURL string, pkgName string) string {
 	return filepath.Join(i.sys.GetSourceDir(), pkgName)
 }
 
-func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error {
+func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (string, string, error) {
 	repoURL = normalizeRepoURL(repoURL)
 	workDir := i.getSourcePath(repoURL, m.Name)
 
