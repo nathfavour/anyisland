@@ -5,14 +5,14 @@ import styles from './styles.module.css';
 
 type FeatureItem = {
   title: string;
-  Svg: React.ComponentType<React.ComponentProps<'svg'>>;
+  emoji: string;
   description: ReactNode;
 };
 
 const FeatureList: FeatureItem[] = [
   {
     title: 'AI-Powered Ingestion',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+    emoji: '🤖',
     description: (
       <>
         Transform any GitHub repository into an installed tool through intelligent source analysis and automated build plan generation.
@@ -21,7 +21,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: 'Platform Agnostic',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
+    emoji: '🌍',
     description: (
       <>
         Built on a Platform Abstraction Layer (PAL), Anyisland provides a unified experience across Linux, macOS, and Windows.
@@ -30,7 +30,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: 'Sovereign Environment',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    emoji: '🏝️',
     description: (
       <>
         Manage your own user-space "Island" with decentralized state synchronization via Git and secure, encrypted shell history.
@@ -39,11 +39,11 @@ const FeatureList: FeatureItem[] = [
   },
 ];
 
-function Feature({title, Svg, description}: FeatureItem) {
+function Feature({title, emoji, description}: FeatureItem) {
   return (
     <div className={clsx('col col--4')}>
       <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
+        <span style={{ fontSize: '5rem' }}>{emoji}</span>
       </div>
       <div className="text--center padding-horiz--md">
         <Heading as="h3">{title}</Heading>
