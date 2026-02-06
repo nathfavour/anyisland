@@ -10,7 +10,9 @@ Anyisland allows developers to distribute their tools effortlessly and integrate
 
 The manifest is the source of truth for Anyisland. Placing this file in your repository's root allows Anyisland to skip AI analysis and follow your explicit instructions.
 
-### Schema Definition
+See the [**Manifest Specification**](./manifest-spec.md) for a detailed breakdown of all available fields and best practices.
+
+### Basic Schema
 
 ```json
 {
