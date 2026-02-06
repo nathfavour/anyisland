@@ -898,35 +898,67 @@ var (
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                                                                                if !available {
+	                                                                                                                                                                                                                                                                                                                                                        if !available {
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                                                                                        fmt.Printf("Anyisland is already at the latest version (%s).\n", latest[:7])
+	                                                                                                                                                                                                                                                                                                                                                                if os.Getenv("ANYISLAND_JUST_UPDATED") == "1" {
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                                                                                        // If no args, we just continue to update other tools
+	                                                                                                                                                                                                                                                                                                                                                                        // If we just updated, don't say 'already up to date'
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                                                                                        if len(args) == 0 {
+	                                                                                                                                                                                                                                                                                                                                                                        if len(args) == 0 {
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                                                                                                goto updateTools
+	                                                                                                                                                                                                                                                                                                                                                                                goto updateTools
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                                                                                        }
+	                                                                                                                                                                                                                                                                                                                                                                        }
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                                                                                        return nil
+	                                                                                                                                                                                                                                                                                                                                                                        return nil
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                                                                                }
+	                                                                                                                                                                                                                                                                                                                                                                }
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                                                                                fmt.Printf("Anyisland is already at the latest version (%s).\n", latest[:7])
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                                                                                // If no args, we just continue to update other tools
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                                                                                if len(args) == 0 {
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                                                                                        goto updateTools
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                                                                                }
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                                                                                return nil
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                                                                                        }
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                                                                                
 	        
 	                                                                                                
 	        
@@ -1062,7 +1094,7 @@ var (
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                                                                                lm.HotSwap()
+	                                                                                                                                                                                                                                                                                lm.HotSwap("ANYISLAND_JUST_UPDATED=1")
 	        
 	                                                                                                
 	        
