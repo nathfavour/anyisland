@@ -165,13 +165,19 @@ func (m *LifecycleManager) CheckAnyislandUpdate(ctx context.Context, ag agent.Sy
 }
 
 func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Synthesizer) {
+	cm := NewConfigManager(m.sys)
+	cfg, _ := cm.Load()
+	if !cfg.Update.AutoUpdate {
+		return
+	}
+
 	// 1. Fast check
 	latest, available, err := m.CheckAnyislandUpdate(ctx, ag)
 	if err != nil || !available {
 		return
 	}
 
-	fmt.Printf("🚀 New version found (%s). Updating Anyisland...\n", latest[:7])
+	fmt.Printf("🚀 New version found (%s). Auto-updating Anyisland...\n", latest[:7])
 
 	// 2. Silent update
 	ingestor := NewIngestor(ag, m.sys)

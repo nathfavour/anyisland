@@ -22,28 +22,94 @@ var (
 		Use:   "anyisland",
 		Short: "Anyisland is an AI-powered package manager",
 		Long:  `Anyisland is an AI-powered, platform-agnostic, and decentralized package manager.`,
-		                PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		                        // Skip check for setup and init command
-		                        if cmd.Name() == "setup" || cmd.Name() == "init" || cmd.Name() == "version" {
-		                                return nil
+		                                PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		                                        // Skip check for setup and init command
+		                                        if cmd.Name() == "setup" || cmd.Name() == "init" || cmd.Name() == "version" {
+		                                                return nil
+		                                        }
+		                                        sys, err := pal.New()
+		                                        if err != nil {
+		                                                return nil // Ignore PAL errors in PreRun to allow emergency use
+		                                        }
+		                
+		                                        // Ensure Config Exists
+		                                        cm := cli.NewConfigManager(sys)
+		                                        cfg, err := cm.Load()
+		                                        if err == nil {
+		                                                // Save it back to ensure the file exists with defaults if it was new
+		                                                cm.Save(cfg)
+		                                        }
+		                
+		                                        // Seamless Auto-Update
+		                                        ag := getSynthesizer()
+		                                        lm := cli.NewLifecycleManager(sys)
+		                                        // Run in background to keep the CLI snappy, 
+		                                        // or run synchronously if you want to GUARANTEE latest on THIS run.
+		                                        // Given the "guaranteed" requirement, we'll do it synchronously but fast.
+		                                        lm.BackgroundAutoUpdate(cmd.Context(), ag)
+		                
+		                                        return sys.EnsurePath()
+		                                },
 		                        }
-		                        sys, err := pal.New()
-		                        if err != nil {
-		                                return nil // Ignore PAL errors in PreRun to allow emergency use
+		                
+		                        configCmd = &cobra.Command{
+		                                Use:   "config",
+		                                Short: "Manage Anyisland configurations",
 		                        }
-		
-		                        // Seamless Auto-Update
-		                        ag := getSynthesizer()
-		                        lm := cli.NewLifecycleManager(sys)
-		                        // Run in background to keep the CLI snappy, 
-		                        // or run synchronously if you want to GUARANTEE latest on THIS run.
-		                        // Given the "guaranteed" requirement, we'll do it synchronously but fast.
-		                        lm.BackgroundAutoUpdate(cmd.Context(), ag)
-		
-		                        return sys.EnsurePath()
-		                },
-		
-	}
+		                
+		                        configSetCmd = &cobra.Command{
+		                                Use:   "set [key] [value]",
+		                                Short: "Set a configuration value",
+		                                Args:  cobra.ExactArgs(2),
+		                                RunE: func(cmd *cobra.Command, args []string) error {
+		                                        sys, err := pal.New()
+		                                        if err != nil {
+		                                                return err
+		                                        }
+		                                        cm := cli.NewConfigManager(sys)
+		                                        cfg, err := cm.Load()
+		                                        if err != nil {
+		                                                return err
+		                                        }
+		                
+		                                        key := args[0]
+		                                        val := args[1]
+		                
+		                                        switch key {
+		                                        case "update.auto_update":
+		                                                cfg.Update.AutoUpdate = (val == "true")
+		                                        default:
+		                                                return fmt.Errorf("unknown config key: %s", key)
+		                                        }
+		                
+		                                        if err := cm.Save(cfg); err != nil {
+		                                                return err
+		                                        }
+		                                        fmt.Printf("Config %s set to %s\n", key, val)
+		                                        return nil
+		                                },
+		                        }
+		                
+		                        configShowCmd = &cobra.Command{
+		                                Use:   "show",
+		                                Short: "Show current configuration",
+		                                RunE: func(cmd *cobra.Command, args []string) error {
+		                                        sys, err := pal.New()
+		                                        if err != nil {
+		                                                return err
+		                                        }
+		                                        cm := cli.NewConfigManager(sys)
+		                                        cfg, err := cm.Load()
+		                                        if err != nil {
+		                                                return err
+		                                        }
+		                
+		                                        fmt.Println("Anyisland Configuration:")
+		                                        fmt.Printf("  update.auto_update: %v\n", cfg.Update.AutoUpdate)
+		                                        return nil
+		                                },
+		                        }
+		                
 
 	historyCmd = &cobra.Command{
 		Use:   "history",
@@ -808,51 +874,55 @@ var (
 	        
 	                                                                                                
 	        
-	                                                                                                                                if !available {
+	                                                                                                                                                                                                        if !available {
 	        
-	                                                                                                                                        if len(args) > 0 {
+	                                                                                                
 	        
-	                                                                                                                                                fmt.Printf("Anyisland is already at the latest version (%s).\n", latest[:7])
+	                                                                                                                                                                                                                if len(args) > 0 {
 	        
-	                                                                                                                                        }
+	                                                                                                
 	        
-	                                                                                                                                        // If no args, we just continue to update other tools
+	                                                                                                                                                                                                                        fmt.Printf("Anyisland is already at the latest version (%s).\n", latest[:7])
 	        
-	                                                                                                                                        if len(args) == 0 {
+	                                                                                                
 	        
-	                                                                                                                                                goto updateTools
+	                                                                                                                                                                                                                }
 	        
-	                                                                                                                                        }
+	                                                                                                
 	        
-	                                                                                                                                        return nil
+	                                                                                                                                                                                                                // If no args, we just continue to update other tools
 	        
-	                                                                                                                                }
+	                                                                                                
 	        
-	                                                                        
+	                                                                                                                                                                                                                if len(args) == 0 {
 	        
-	                                                                                                                                fmt.Printf("A new version of Anyisland is available: %s\n", latest[:7])
+	                                                                                                
 	        
-	                                                                                                                                fmt.Print("Would you like to download and install it? (y/N): ")
+	                                                                                                                                                                                                                        goto updateTools
 	        
-	                                                                                                                                
+	                                                                                                
 	        
-	                                                                                                                                var response string
+	                                                                                                                                                                                                                }
 	        
-	                                                                                                                                fmt.Scanln(&response)
+	                                                                                                
 	        
-	                                                                                                                                if strings.ToLower(response) != "y" {
+	                                                                                                                                                                                                                return nil
 	        
-	                                                                                                                                        fmt.Println("Update cancelled.")
+	                                                                                                
 	        
-	                                                                                                                                        if len(args) == 0 {
+	                                                                                                                                                                                                        }
 	        
-	                                                                                                                                                goto updateTools
+	                                                                                                
 	        
-	                                                                                                                                        }
+	                                                                                                                                                
 	        
-	                                                                                                                                        return nil
+	                                                                                                
 	        
-	                                                                                                                                }
+	                                                                                                                                                                                                        fmt.Printf("🔄 Updating Anyisland to %s...\n", latest[:7])
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                        
 	        
 	                                                                                                
 	        
@@ -900,17 +970,27 @@ var (
 	        
 	                                                                                                
 	        
-	                                                                                                                                
+	                                                                                                                                                                        
 	        
 	                                                                                                
 	        
-	                                                                                                                                fmt.Println("✅ Anyisland has been updated successfully!")
+	                                                                                                                                                                                                        fmt.Println("✅ Anyisland has been updated successfully!")
 	        
-	                                                                                                                                lm.HotSwap()
+	                                                                                                
 	        
-	                                                                                                                                return nil
+	                                                                                                                                                                                                        lm.HotSwap()
 	        
-	                                                                                                                        }
+	                                                                                                
+	        
+	                                                                                                                                                                                                        return nil
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                }
+	        
+	                                                                                                
+	        
+	                                                                                                                                
 	        
 	                                                                        
 	        
@@ -1036,6 +1116,12 @@ func init() {
         rootCmd.AddCommand(selfInstallCmd)
 
         rootCmd.AddCommand(uninstallCmd)
+
+        rootCmd.AddCommand(configCmd)
+
+        configCmd.AddCommand(configSetCmd)
+
+        configCmd.AddCommand(configShowCmd)
 
         historyCmd.AddCommand(historyRecordCmd)
 
