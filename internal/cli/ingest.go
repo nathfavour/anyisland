@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/google/go-github/v60/github"
 	"github.com/nathfavour/anyisland/internal/agent"
@@ -152,6 +153,20 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 	for _, step := range plan.Steps {
 		fmt.Printf("Executing: %s\n", step)
 		args := strings.Fields(step)
+
+		// Inject ldflags for Anyisland core components
+		if (m.Name == "anyisland" || m.Name == "anyislandd") && args[0] == "go" && (args[1] == "build" || args[1] == "install") {
+			commit, _ := i.DiscoverLatestCommit(ctx, repoURL)
+			if commit == "" {
+				commit = "unknown"
+			}
+			buildTime := time.Now().UTC().Format(time.RFC3339)
+			ldflags := fmt.Sprintf("-X github.com/nathfavour/anyisland/internal/cli.Version=%s -X github.com/nathfavour/anyisland/internal/cli.Commit=%s -X github.com/nathfavour/anyisland/internal/cli.BuildTime=%s", m.Version, commit, buildTime)
+
+			// Add ldflags to the command
+			args = append(args, "-ldflags", ldflags)
+		}
+
 		buildCmd := exec.CommandContext(ctx, args[0], args[1:]...)
 		buildCmd.Dir = workDir
 
