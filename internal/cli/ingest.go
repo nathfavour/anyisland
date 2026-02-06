@@ -365,6 +365,9 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		if _, err := os.Stat(manifestPath); err == nil {
 			m, err := LoadManifest(manifestPath)
 			if err == nil {
+				if m.Name == "anyisland" || m.Name == "anyislandd" {
+					return nil, commit, fmt.Errorf("this local path identifies as Anyisland. Management via 'install' is not allowed")
+				}
 				return m, commit, nil
 			}
 		}
@@ -402,6 +405,9 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		if err == nil {
 			var m Manifest
 			if err := json.Unmarshal(output, &m); err == nil {
+				if m.Name == "anyisland" || m.Name == "anyislandd" {
+					return nil, commit, fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
+				}
 				return &m, commit, nil
 			}
 		}
@@ -420,62 +426,117 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		}
 	}
 
-	// AI Discretion Check
-	discretion, err := i.agent.AnalyzeDiscretion(ctx, files, readmeContent)
-	if err == nil && discretion != nil && !discretion.Allowed {
-		return nil, commit, fmt.Errorf("repository is not a buildable tool: %s", discretion.Reason)
-	}
+		// AI Discretion Check
 
-	isGo := false
-	for _, f := range files {
-		if f == "go.mod" {
-			isGo = true
-			break
+		discretion, err := i.agent.AnalyzeDiscretion(ctx, files, readmeContent)
+
+		if err == nil && discretion != nil && !discretion.Allowed {
+
+			return nil, commit, fmt.Errorf("repository is not a buildable tool: %s", discretion.Reason)
+
 		}
-	}
-	if isGo {
-		return &Manifest{
+
+	
+
+		manifest := &Manifest{
+
 			Name:    repo,
+
 			Version: "latest",
-			Build: agent.BuildPlan{
+
+		}
+
+	
+
+		isGo := false
+
+		for _, f := range files {
+
+			if f == "go.mod" {
+
+				isGo = true
+
+				break
+
+			}
+
+		}
+
+		if isGo {
+
+			manifest.Build = agent.BuildPlan{
+
 				Toolchain: "go",
+
 				Steps:     []string{"go build -v -o " + repo},
+
 				Bin:       repo,
-			},
-		}, commit, nil
-	}
 
-	isRust := false
-	for _, f := range files {
-		if f == "Cargo.toml" {
-			isRust = true
-			break
+			}
+
+		} else {
+
+			isRust := false
+
+			for _, f := range files {
+
+				if f == "Cargo.toml" {
+
+					isRust = true
+
+					break
+
+				}
+
+			}
+
+			if isRust {
+
+				manifest.Build = agent.BuildPlan{
+
+					Toolchain: "rust",
+
+					Steps:     []string{"cargo build --release"},
+
+					Bin:       "target/release/" + repo,
+
+				}
+
+			} else {
+
+				plan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
+
+				if err != nil {
+
+					fallback := &agent.HeuristicSynthesizer{}
+
+					plan, _ = fallback.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
+
+				}
+
+				manifest.Build = *plan
+
+			}
+
 		}
-	}
-	if isRust {
-		return &Manifest{
-			Name:    repo,
-			Version: "latest",
-			Build: agent.BuildPlan{
-				Toolchain: "rust",
-				Steps:     []string{"cargo build --release"},
-				Bin:       "target/release/" + repo,
-			},
-		}, commit, nil
-	}
 
-	plan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
-	if err != nil {
-		fallback := &agent.HeuristicSynthesizer{}
-		plan, _ = fallback.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
-	}
+	
 
-	return &Manifest{
-		Name:    repo,
-		Version: "latest",
-		Build:   *plan,
-	}, commit, nil
-}
+		// Self-Conflict Prevention: If the tool identifies as anyisland, 
+
+		// we must ensure it doesn't overwrite the manager via a generic install.
+
+		if manifest.Name == "anyisland" || manifest.Name == "anyislandd" {
+
+			return manifest, commit, fmt.Errorf("this repository contains Anyisland core components. Please use 'anyisland update' to manage the manager itself")
+
+		}
+
+	
+
+		return manifest, commit, nil
+
+	}
 
 func normalizeRepoURL(url string) string {
 	if !strings.HasPrefix(url, "http") && !strings.HasPrefix(url, "git@") {
