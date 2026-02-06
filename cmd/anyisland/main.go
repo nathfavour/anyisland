@@ -1097,19 +1097,32 @@ var (
 	                                return err
 	                        }
 	
-	                        var toUpdate []registry.Tool
-	                        target := args[0]
-	                        for _, t := range tools {
-	                              if t.Name == target {
-	                              toUpdate = append(toUpdate, t)
-	                              break
-	                              }
-	                        }
-	                        if len(toUpdate) == 0 {
-	                              return fmt.Errorf("tool %s not found in registry", target)
-	                        }
-	
-	                        ag := getSynthesizer()
+	                                                          var toUpdate []registry.Tool
+	                                                          if len(args) > 0 {
+	                                                                  target := args[0]
+	                                                                  if target == "anyisland" {
+	                                                                          // Already handled above
+	                                                                          return nil
+	                                                                  }
+	                                                                  for _, t := range tools {
+	                                                                        if t.Name == target {
+	                                                                        toUpdate = append(toUpdate, t)
+	                                                                        break
+	                                                                        }
+	                                                                  }
+	                                                                  if len(toUpdate) == 0 {
+	                                                                        return fmt.Errorf("tool %s not found in registry", target)
+	                                                                  }
+	                                                                                            } else {
+	                                                                                                    // Update all tools if no specific tool is named
+	                                                                                                    for _, t := range tools {
+	                                                                                                            if t.Name != "anyisland" && t.Name != "anyislandd" {
+	                                                                                                                    toUpdate = append(toUpdate, t)
+	                                                                                                            }
+	                                                                                                    }
+	                                                                                            }
+	                                                          
+	                        	                        ag := getSynthesizer()
 	                        ingestor := cli.NewIngestor(ag, sys)
 	
 	                        for _, t := range toUpdate {
