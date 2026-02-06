@@ -1,0 +1,10 @@
+{
+  "name": "ripgrep",
+  "version": "14.1.0",
+  "build": {
+    "steps": [
+      "cargo build --release"
+    ],
+    "bin": "target/release/rg"
+  }
+}

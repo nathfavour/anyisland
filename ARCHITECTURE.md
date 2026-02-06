@@ -42,7 +42,7 @@ Anyisland captures shell history across sessions.
 
  * Input: User provides a GitHub URL.
  * Inspection: Anyisland fetches the file tree.
-   * Path A: If anyisland.yaml exists, follow explicit instructions.
+   * Path A: If anyisland.json exists, follow explicit instructions.
    * Path B: If not, pass README.md and file list to AI Synthesizer.
  * Plan Generation: AI returns a JSON "Build Plan" (e.g., go build -o anyisland).
  * Verification: User approves the AI-generated plan.

@@ -1,0 +1,10 @@
+{
+  "name": "gofumpt",
+  "version": "latest",
+  "build": {
+    "steps": [
+      "go build -o gofumpt mvdan.cc/gofumpt"
+    ],
+    "bin": "gofumpt"
+  }
+}

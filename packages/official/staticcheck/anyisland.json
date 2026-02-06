@@ -1,0 +1,10 @@
+{
+  "name": "staticcheck",
+  "version": "latest",
+  "build": {
+    "steps": [
+      "go build -o staticcheck honnef.co/go/tools/cmd/staticcheck"
+    ],
+    "bin": "staticcheck"
+  }
+}
