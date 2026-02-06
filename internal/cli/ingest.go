@@ -1,9 +1,12 @@
 package cli
 
 import (
+	"archive/zip"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,23 +31,54 @@ func NewIngestor(ag agent.Synthesizer, sys pal.System) *Ingestor {
 	}
 }
 
+func (i *Ingestor) getSourcePath(repoURL string, pkgName string) string {
+	if _, err := os.Stat(repoURL); err == nil {
+		abs, _ := filepath.Abs(repoURL)
+		return abs
+	}
+
+	cleanURL := strings.TrimPrefix(repoURL, "https://")
+	cleanURL = strings.TrimPrefix(cleanURL, "http://")
+	cleanURL = strings.TrimPrefix(cleanURL, "git@")
+	cleanURL = strings.Replace(cleanURL, ":", "/", 1)
+	cleanURL = strings.TrimSuffix(cleanURL, ".git")
+
+	parts := strings.Split(cleanURL, "/")
+	// Detect provider (github.com, gitlab.com, etc)
+	if len(parts) >= 3 {
+		host := parts[0]
+		user := parts[1]
+		repo := parts[2]
+
+		provider := ""
+		if strings.Contains(host, "github") {
+			provider = "github"
+		} else if strings.Contains(host, "gitlab") {
+			provider = "gitlab"
+		}
+
+		if provider != "" {
+			return filepath.Join(i.sys.GetSourceDir(), provider, user, repo)
+		}
+	}
+
+	return filepath.Join(i.sys.GetSourceDir(), pkgName)
+}
+
 func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error {
 	repoURL = normalizeRepoURL(repoURL)
-	var workDir string
+	workDir := i.getSourcePath(repoURL, m.Name)
 
 	if _, err := os.Stat(repoURL); err == nil {
 		// Local path: use it directly
-		workDir = repoURL
 		fmt.Printf("Using local source at %s\n", workDir)
-	} else {
-		// Remote: manage in SourceDir
-		parts := strings.Split(strings.TrimPrefix(repoURL, "https://github.com/"), "/")
-		if len(parts) < 2 {
-			return fmt.Errorf("invalid github URL: %s", repoURL)
+	} else if strings.HasSuffix(repoURL, ".zip") || strings.Contains(repoURL, "/zipball/") || strings.Contains(repoURL, "/archive/") {
+		// ZIP source
+		if err := i.downloadAndUnzip(ctx, repoURL, workDir); err != nil {
+			return err
 		}
-		repoPath := filepath.Join(parts...)
-		workDir = filepath.Join(i.sys.GetSourceDir(), repoPath)
-
+	} else {
+		// Remote Git repo
 		if _, err := os.Stat(filepath.Join(workDir, ".git")); os.IsNotExist(err) {
 			fmt.Printf("Cloning %s to %s...\n", repoURL, workDir)
 			if err := os.MkdirAll(filepath.Dir(workDir), 0755); err != nil {
@@ -56,18 +90,33 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 			}
 		} else {
 			fmt.Printf("Updating %s in %s...\n", repoURL, workDir)
-			// Efficient update using fetch + reset --hard to origin/master or main
 			fetchCmd := exec.CommandContext(ctx, "git", "-C", workDir, "fetch", "origin")
 			if err := fetchCmd.Run(); err != nil {
 				return fmt.Errorf("git fetch failed: %w", err)
 			}
 
-			// Try to reset to origin/master or origin/main
 			resetCmd := exec.CommandContext(ctx, "git", "-C", workDir, "reset", "--hard", "origin/master")
 			if err := resetCmd.Run(); err != nil {
 				resetCmd = exec.CommandContext(ctx, "git", "-C", workDir, "reset", "--hard", "origin/main")
 				if err := resetCmd.Run(); err != nil {
 					return fmt.Errorf("git reset failed: %w", err)
+				}
+			}
+		}
+	}
+
+	// Check if this was actually a git repo (important for zips)
+	if _, err := os.Stat(filepath.Join(workDir, ".git")); err == nil {
+		gitURLCmd := exec.Command("git", "-C", workDir, "remote", "get-url", "origin")
+		remoteURLBytes, err := gitURLCmd.Output()
+		if err == nil {
+			remoteURL := strings.TrimSpace(string(remoteURLBytes))
+			structuredPath := i.getSourcePath(remoteURL, m.Name)
+			if structuredPath != workDir {
+				fmt.Printf("Detected git repo in source, moving to %s\n", structuredPath)
+				os.MkdirAll(filepath.Dir(structuredPath), 0755)
+				if err := os.Rename(workDir, structuredPath); err == nil {
+					workDir = structuredPath
 				}
 			}
 		}
@@ -125,6 +174,85 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 	}
 	if err := os.WriteFile(dstBin, input, 0755); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (i *Ingestor) downloadAndUnzip(ctx context.Context, url, dest string) error {
+	fmt.Printf("Downloading %s...\n", url)
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad status: %s", resp.Status)
+	}
+
+	tmpFile, err := os.CreateTemp("", "anyisland-*.zip")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+
+	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
+		return err
+	}
+
+	fmt.Printf("Extracting to %s...\n", dest)
+	r, err := zip.OpenReader(tmpFile.Name())
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	os.MkdirAll(dest, 0755)
+
+	// Extract files
+	for _, f := range r.File {
+		fpath := filepath.Join(dest, f.Name)
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(fpath, os.ModePerm)
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
+			return err
+		}
+
+		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			return err
+		}
+
+		rc, err := f.Open()
+		if err != nil {
+			outFile.Close()
+			return err
+		}
+
+		_, err = io.Copy(outFile, rc)
+		outFile.Close()
+		rc.Close()
+
+		if err != nil {
+			return err
+		}
+	}
+
+	// If the zip contained exactly one directory, move its contents up
+	entries, _ := os.ReadDir(dest)
+	if len(entries) == 1 && entries[0].IsDir() {
+		subDir := filepath.Join(dest, entries[0].Name())
+		fmt.Printf("Flattening directory structure from %s\n", subDir)
+		subEntries, _ := os.ReadDir(subDir)
+		for _, se := range subEntries {
+			os.Rename(filepath.Join(subDir, se.Name()), filepath.Join(dest, se.Name()))
+		}
+		os.Remove(subDir)
 	}
 
 	return nil
