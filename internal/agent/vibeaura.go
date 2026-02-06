@@ -227,6 +227,104 @@ Provide a concise, helpful explanation and if possible, the corrected command or
 
 
 
-	return v.query(ctx, prompt, "plan")
+		return v.query(ctx, prompt, "plan")
 
-}
+
+
+	}
+
+
+
+	
+
+
+
+	func (v *VibeauraSynthesizer) DiscoverTool(ctx context.Context, query string) (string, error) {
+
+
+
+		prompt := fmt.Sprintf(`The user is looking for a CLI tool for: "%s"
+
+
+
+	Find the most reputable and relevant GitHub repository for this purpose. 
+
+
+
+	Return ONLY the GitHub URL (e.g., https://github.com/user/repo). 
+
+
+
+	If you are unsure, return "NONE".`, query)
+
+
+
+	
+
+
+
+		return v.query(ctx, prompt, "ask")
+
+
+
+	}
+
+
+
+	
+
+
+
+	func (v *VibeauraSynthesizer) ExplainTool(ctx context.Context, name string, manifest interface{}, readme string) (string, error) {
+
+
+
+		manifestJSON, _ := json.MarshalIndent(manifest, "", "  ")
+
+
+
+		prompt := fmt.Sprintf(`Provide a concise (max 5 lines) explanation of what the tool "%s" does and how to run it.
+
+
+
+	Manifest:
+
+
+
+	%s
+
+
+
+	
+
+
+
+	README snippet:
+
+
+
+	%.1000s
+
+
+
+	
+
+
+
+	Focus on the primary command and its most common use case.`, name, string(manifestJSON), readme)
+
+
+
+	
+
+
+
+		return v.query(ctx, prompt, "ask")
+
+
+
+	}
+
+
+
+	

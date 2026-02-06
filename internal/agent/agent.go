@@ -18,6 +18,8 @@ type Synthesizer interface {
 	RedactCommand(ctx context.Context, command string) (string, error)
 	AnalyzeDiscretion(ctx context.Context, files []string, readme string) (*DiscretionResult, error)
 	DebugBuildFailure(ctx context.Context, log string, manifest interface{}) (string, error)
+	DiscoverTool(ctx context.Context, query string) (string, error)
+	ExplainTool(ctx context.Context, name string, manifest interface{}, readme string) (string, error)
 }
 
 type DiscretionResult struct {
@@ -99,8 +101,48 @@ func (m *HeuristicSynthesizer) AnalyzeDiscretion(ctx context.Context, files []st
 
 func (m *HeuristicSynthesizer) DebugBuildFailure(ctx context.Context, log string, manifest interface{}) (string, error) {
 
+
+
 	return "Local Analysis: Build failed. Check the error log above for toolchain issues or missing dependencies.", nil
 
+
+
 }
+
+
+
+
+
+
+
+func (m *HeuristicSynthesizer) DiscoverTool(ctx context.Context, query string) (string, error) {
+
+
+
+	return "", fmt.Errorf("AI Discovery is unavailable. Please provide a full GitHub URL.")
+
+
+
+}
+
+
+
+
+
+
+
+func (m *HeuristicSynthesizer) ExplainTool(ctx context.Context, name string, manifest interface{}, readme string) (string, error) {
+
+
+
+	return fmt.Sprintf("Tool: %s. Documentation is available in the source repository.", name), nil
+
+
+
+}
+
+
+
+
 
 
