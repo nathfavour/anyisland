@@ -1,12 +1,10 @@
 package main
 
 import (
-        "fmt"
-        "os"
-        "os/exec"
-        "path/filepath"
-        "runtime"
-        "strings"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"github.com/spf13/cobra"
 	"github.com/nathfavour/anyisland/internal/pal"
 	"github.com/nathfavour/anyisland/internal/registry"
@@ -15,7 +13,6 @@ import (
 	"github.com/nathfavour/anyisland/internal/history"
 	"github.com/nathfavour/anyisland/internal/crypto"
 )
-
 var (
 	sourceFlag string
 
@@ -920,10 +917,9 @@ var (
 		return agent.NewVibeauraSynthesizer()
 	}
 
-	return &agent.MockSynthesizer{}
-}
-
-func main() {
+	        return &agent.HeuristicSynthesizer{}
+	}
+	func main() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
