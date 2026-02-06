@@ -139,23 +139,26 @@ func (m *LifecycleManager) Rollback() error {
 	})
 }
 
-func (m *LifecycleManager) HotSwap(extraEnv ...string) error {
-	exePath, err := os.Executable()
-	if err != nil {
-		return err
+func (m *LifecycleManager) HotSwap(targetPath string, extraEnv ...string) error {
+	exePath := targetPath
+	if exePath == "" {
+		var err error
+		exePath, err = os.Executable()
+		if err != nil {
+			return err
+		}
 	}
 
 	m.LogEvent(LifecycleEvent{
 		Type:    "update",
 		Action:  "hot_swap",
 		Status:  "success",
-		Message: "Performing hot-swap/exec",
+		Message: fmt.Sprintf("Performing hot-swap/exec to %s", exePath),
 	})
 
 	env := os.Environ()
 	env = append(env, extraEnv...)
 
-	// In a real scenario, we might pass a --resume-state flag
 	return syscallExec(exePath, os.Args, env)
 }
 
@@ -236,7 +239,7 @@ func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Sy
 	
 	// HotSwap to the new binary and re-run the original command
 	// We pass a signal that we just updated to avoid redundant "already up to date" messages
-	if err := m.HotSwap("ANYISLAND_JUST_UPDATED=1"); err != nil {
+	if err := m.HotSwap(installPath, "ANYISLAND_JUST_UPDATED=1"); err != nil {
 		fmt.Printf("⚠️ Failed to restart after update: %v\n", err)
 		return
 	}

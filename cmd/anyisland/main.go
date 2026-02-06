@@ -894,17 +894,17 @@ import (
 	                                                                        signal.Notify(sigChan, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 	                                                                        go func() {
 	                                                                                for sig := range sigChan {
-	                                                                                        switch sig {
-	                                                                                        case syscall.SIGHUP:
-	                                                                                                fmt.Println("Received SIGHUP, performing hot-swap...")
-	                                                                                                lm := cli.NewLifecycleManager(sys)
-	                                                                                                if err := lm.HotSwap(); err != nil {
-	                                                                                                        fmt.Printf("Hot-swap failed: %v\n", err)
-	                                                                                                }
-	                                                                                        case syscall.SIGINT, syscall.SIGTERM:
-	                                                                                                fmt.Println("Shutting down daemon...")
-	                                                                                                cancel()
-	                                                                                        }
+	                                                                                                                                                                                        switch sig {
+	                                                                                                                                                                                        case syscall.SIGHUP:
+	                                                                                                                                                                                                fmt.Println("Received SIGHUP, performing hot-swap...")
+	                                                                                                                                                                                                lm := cli.NewLifecycleManager(sys)
+	                                                                                                                                                                                                if err := lm.HotSwap(""); err != nil {
+	                                                                                                                                                                                                        fmt.Printf("Hot-swap failed: %v\n", err)
+	                                                                                                                                                                                                }
+	                                                                                                                                                                                        case syscall.SIGINT, syscall.SIGTERM:
+	                                                                                                                                                                                                fmt.Println("Shutting down daemon...")
+	                                                                                                                                                                                                cancel()
+	                                                                                                                                                                                        }
 	                                                                                }
 	                                                                        }()
 	                                        
@@ -1252,8 +1252,7 @@ import (
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                                                                                lm.HotSwap("ANYISLAND_JUST_UPDATED=1")
-	        
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        lm.HotSwap(installPath, "ANYISLAND_JUST_UPDATED=1")	        
 	                                                                                                
 	        
 	                                                                                                                                                                                                                                                                                return nil
