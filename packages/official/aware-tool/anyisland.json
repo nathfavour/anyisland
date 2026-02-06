@@ -1,0 +1,10 @@
+{
+  "name": "aware-tool",
+  "version": "1.0.0",
+  "build": {
+    "steps": [
+      "go build -o aware-tool ./examples/aware-tool"
+    ],
+    "bin": "aware-tool"
+  }
+}
