@@ -149,183 +149,52 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 		}
 	}
 
-	        // 2. Execute build steps
+	// 2. Execute build steps
 
-	        plan := m.Build
+	plan := m.Build
 
-	        
+	// Go-specific Pre-build check
 
-	                // Go-specific Pre-build check
+	if plan.Toolchain == "go" {
 
-	        
+		if _, err := exec.LookPath("go"); err != nil {
 
-	                if plan.Toolchain == "go" {
+			return fmt.Errorf("go toolchain required but not found in PATH")
 
-	        
+		}
 
-	                        if _, err := exec.LookPath("go"); err != nil {
+	}
 
-	        
+	// Rust-specific Pre-build check
 
-	                                return fmt.Errorf("go toolchain required but not found in PATH")
+	if plan.Toolchain == "rust" {
 
-	        
+		if _, err := exec.LookPath("cargo"); err != nil {
 
-	                        }
+			return fmt.Errorf("rust toolchain (cargo) required but not found in PATH")
 
-	        
+		}
 
-	                }
+	}
 
-	        
+	// Python-specific Pre-build check
 
-	                
+	if plan.Toolchain == "python" {
 
-	        
+		if _, err := exec.LookPath("python3"); err != nil {
 
-	                        // Rust-specific Pre-build check
+			if _, err := exec.LookPath("python"); err != nil {
 
-	        
+				return fmt.Errorf("python3 or python required but not found in PATH")
 
-	                
+			}
 
-	        
+		}
 
-	                        if plan.Toolchain == "rust" {
+	}
 
-	        
+	for _, step := range plan.Steps {
 
-	                
-
-	        
-
-	                                if _, err := exec.LookPath("cargo"); err != nil {
-
-	        
-
-	                
-
-	        
-
-	                                        return fmt.Errorf("rust toolchain (cargo) required but not found in PATH")
-
-	        
-
-	                
-
-	        
-
-	                                }
-
-	        
-
-	                
-
-	        
-
-	                        }
-
-	        
-
-	                
-
-	        
-
-	                
-
-	        
-
-	                
-
-	        
-
-	                        // Python-specific Pre-build check
-
-	        
-
-	                
-
-	        
-
-	                        if plan.Toolchain == "python" {
-
-	        
-
-	                
-
-	        
-
-	                                if _, err := exec.LookPath("python3"); err != nil {
-
-	        
-
-	                
-
-	        
-
-	                                        if _, err := exec.LookPath("python"); err != nil {
-
-	        
-
-	                
-
-	        
-
-	                                                return fmt.Errorf("python3 or python required but not found in PATH")
-
-	        
-
-	                
-
-	        
-
-	                                        }
-
-	        
-
-	                
-
-	        
-
-	                                }
-
-	        
-
-	                
-
-	        
-
-	                        }
-
-	        
-
-	                
-
-	        
-
-	                
-
-	        
-
-	                
-
-	        
-
-	                        for _, step := range plan.Steps {
-
-	        
-
-	                
-
-	        
-
-	                
-
-	        
-
-	        
-
-	
 		fmt.Printf("Executing: %s\n", step)
 		args := strings.Fields(step)
 		buildCmd := exec.CommandContext(ctx, args[0], args[1:]...)
@@ -337,353 +206,308 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 		}
 	}
 
-	                // 3. Move binary/bundle
+	// 3. Move binary/bundle
 
-	                binPattern := filepath.Join(workDir, plan.Bin)
+	binPattern := filepath.Join(workDir, plan.Bin)
 
-	                matches, err := filepath.Glob(binPattern)
+	matches, err := filepath.Glob(binPattern)
 
-	                srcBin := ""
+	srcBin := ""
 
-	                if err == nil && len(matches) > 0 {
+	if err == nil && len(matches) > 0 {
 
-	                        srcBin = matches[0] // Pick the first match
+		srcBin = matches[0] // Pick the first match
 
-	                } else {
+	} else {
 
-	                        srcBin = binPattern // Fallback to literal path
+		srcBin = binPattern // Fallback to literal path
 
-	                }
+	}
 
-	        
+	targetDir := ""
 
-	                targetDir := ""
+	if plan.InstallDir != "" {
 
-	                if plan.InstallDir != "" {
+		targetDir = plan.InstallDir
 
-	                        targetDir = plan.InstallDir
+	} else {
 
-	                } else {
+		targetDir = i.sys.GetIslandBinDir()
 
-	                        targetDir = i.sys.GetIslandBinDir()
+		if plan.Bin == "anyisland" || plan.Bin == "anyislandd" {
 
-	                        if plan.Bin == "anyisland" || plan.Bin == "anyislandd" {
+			targetDir = i.sys.GetBinDir()
 
-	                                targetDir = i.sys.GetBinDir()
+		}
 
-	                        }
+	}
 
-	                }
+	if plan.Toolchain == "flutter" {
 
-	        
+		// Flutter needs its entire bundle directory to run (data, lib, etc.)
 
-	                if plan.Toolchain == "flutter" {
+		// We install it to a subdirectory and create a wrapper script
 
-	                        // Flutter needs its entire bundle directory to run (data, lib, etc.)
+		appDir := filepath.Join(targetDir, m.Name+"-app")
 
-	                        // We install it to a subdirectory and create a wrapper script
+		_ = os.RemoveAll(appDir)
 
-	                        appDir := filepath.Join(targetDir, m.Name+"-app")
+		if err := os.MkdirAll(appDir, 0755); err != nil {
 
-	                        _ = os.RemoveAll(appDir)
+			return fmt.Errorf("failed to create app directory: %w", err)
 
-	                        if err := os.MkdirAll(appDir, 0755); err != nil {
+		}
 
-	                                return fmt.Errorf("failed to create app directory: %w", err)
+		fmt.Printf("Deploying Flutter bundle to %s...\n", appDir)
 
-	                        }
+		// Use shell to copy directory contents
 
-	        
+		cpCmd := exec.Command("cp", "-r", srcBin+"/.", appDir)
 
-	                        fmt.Printf("Deploying Flutter bundle to %s...\n", appDir)
+		if runtime.GOOS == "windows" {
 
-	                        // Use shell to copy directory contents
+			cpCmd = exec.Command("xcopy", "/E", "/I", "/Y", srcBin, appDir)
 
-	                        cpCmd := exec.Command("cp", "-r", srcBin+"/.", appDir)
+		}
 
-	                        if runtime.GOOS == "windows" {
+		if err := cpCmd.Run(); err != nil {
 
-	                                cpCmd = exec.Command("xcopy", "/E", "/I", "/Y", srcBin, appDir)
+			return fmt.Errorf("failed to copy flutter bundle: %w", err)
 
-	                        }
+		}
 
-	                        if err := cpCmd.Run(); err != nil {
+		// Find the actual executable in the bundle
 
-	                                return fmt.Errorf("failed to copy flutter bundle: %w", err)
+		entries, _ := os.ReadDir(appDir)
 
-	                        }
+		exeName := m.Name
 
-	        
+		for _, entry := range entries {
 
-	                        // Find the actual executable in the bundle
+			if !entry.IsDir() && (entry.Type().IsRegular() || entry.Type() == 0) {
 
-	                        entries, _ := os.ReadDir(appDir)
+				// Basic heuristic: the binary usually has the project name or is the only non-extension file
 
-	                        exeName := m.Name
+				if !strings.Contains(entry.Name(), ".") {
 
-	                        for _, entry := range entries {
+					exeName = entry.Name()
 
-	                                if !entry.IsDir() && (entry.Type().IsRegular() || entry.Type() == 0) {
+					break
 
-	                                        // Basic heuristic: the binary usually has the project name or is the only non-extension file
+				}
 
-	                                        if !strings.Contains(entry.Name(), ".") {
+			}
 
-	                                                exeName = entry.Name()
+		}
 
-	                                                break
+		// Create wrapper script in the main bin directory
 
-	                                        }
+		wrapperPath := filepath.Join(targetDir, m.Name)
 
-	                                }
+		wrapperContent := fmt.Sprintf("#!/bin/bash\ncd %s && ./%s \"$@\"\n", appDir, exeName)
 
-	                        }
+		if runtime.GOOS == "windows" {
 
-	        
+			wrapperPath += ".bat"
 
-	                        // Create wrapper script in the main bin directory
+			wrapperContent = fmt.Sprintf("@echo off\ncd /d %%~dp0\\%s-app\nstart \"\" %s.exe %%*\n", m.Name, exeName)
 
-	                        wrapperPath := filepath.Join(targetDir, m.Name)
+		}
 
-	                        wrapperContent := fmt.Sprintf("#!/bin/bash\ncd %s && ./%s \"$@\"\n", appDir, exeName)
+		if err := os.WriteFile(wrapperPath, []byte(wrapperContent), 0755); err != nil {
 
-	                        if runtime.GOOS == "windows" {
+			return fmt.Errorf("failed to create wrapper script: %w", err)
 
-	                                wrapperPath += ".bat"
+		}
 
-	                                wrapperContent = fmt.Sprintf("@echo off\ncd /d %%~dp0\\%s-app\nstart \"\" %s.exe %%*\n", m.Name, exeName)
+		fmt.Printf("Created wrapper at %s\n", wrapperPath)
 
-	                        }
+		return nil
 
-	        
+	}
 
-	                        if err := os.WriteFile(wrapperPath, []byte(wrapperContent), 0755); err != nil {
+	if plan.Toolchain == "node" {
 
-	                                return fmt.Errorf("failed to create wrapper script: %w", err)
+		// Node.js projects need their node_modules and package.json
 
-	                        }
+		appDir := filepath.Join(targetDir, m.Name+"-app")
 
-	                                        fmt.Printf("Created wrapper at %s\n", wrapperPath)
+		_ = os.RemoveAll(appDir)
 
-	                                        return nil
+		if err := os.MkdirAll(appDir, 0755); err != nil {
 
-	                                }
+			return fmt.Errorf("failed to create app directory: %w", err)
 
-	                        
+		}
 
-	                                if plan.Toolchain == "node" {
+		fmt.Printf("Deploying Node.js project to %s...\n", appDir)
 
-	                                        // Node.js projects need their node_modules and package.json
+		cpCmd := exec.Command("cp", "-r", workDir+"/.", appDir)
 
-	                                        appDir := filepath.Join(targetDir, m.Name+"-app")
+		if runtime.GOOS == "windows" {
 
-	                                        _ = os.RemoveAll(appDir)
+			cpCmd = exec.Command("xcopy", "/E", "/I", "/Y", workDir, appDir)
 
-	                                        if err := os.MkdirAll(appDir, 0755); err != nil {
+		}
 
-	                                                return fmt.Errorf("failed to create app directory: %w", err)
+		if err := cpCmd.Run(); err != nil {
 
-	                                        }
+			return fmt.Errorf("failed to copy node project: %w", err)
 
-	                        
+		}
 
-	                                        fmt.Printf("Deploying Node.js project to %s...\n", appDir)
+		// Try to find the entry point in package.json
 
-	                                        cpCmd := exec.Command("cp", "-r", workDir+"/.", appDir)
+		pkgData, err := os.ReadFile(filepath.Join(appDir, "package.json"))
 
-	                                        if runtime.GOOS == "windows" {
+		var binScript string
 
-	                                                cpCmd = exec.Command("xcopy", "/E", "/I", "/Y", workDir, appDir)
+		if err == nil {
 
-	                                        }
+			var pkg struct {
+				Bin map[string]string `json:"bin"`
+			}
 
-	                                        if err := cpCmd.Run(); err != nil {
+			if err := json.Unmarshal(pkgData, &pkg); err == nil && len(pkg.Bin) > 0 {
 
-	                                                return fmt.Errorf("failed to copy node project: %w", err)
+				// Just pick the first one if multiple are defined
 
-	                                        }
+				for _, script := range pkg.Bin {
 
-	                        
+					binScript = script
 
-	                                        // Try to find the entry point in package.json
+					break
 
-	                                        pkgData, err := os.ReadFile(filepath.Join(appDir, "package.json"))
+				}
 
-	                                        var binScript string
+			}
 
-	                                        if err == nil {
+		}
 
-	                                                var pkg struct {
+		if binScript == "" {
 
-	                                                        Bin map[string]string `json:"bin"`
+			binScript = "index.js" // fallback
 
-	                                                }
+		}
 
-	                                                if err := json.Unmarshal(pkgData, &pkg); err == nil && len(pkg.Bin) > 0 {
+		// Create wrapper script
 
-	                                                        // Just pick the first one if multiple are defined
+		wrapperPath := filepath.Join(targetDir, m.Name)
 
-	                                                        for _, script := range pkg.Bin {
+		wrapperContent := fmt.Sprintf("#!/bin/bash\nnode %s/%s \"$@\"\n", appDir, binScript)
 
-	                                                                binScript = script
+		if runtime.GOOS == "windows" {
 
-	                                                                break
+			wrapperPath += ".bat"
 
-	                                                        }
+			wrapperContent = fmt.Sprintf("@echo off\nnode %%~dp0\\%s-app\\%s %%*\n", m.Name, binScript)
 
-	                                                }
+		}
 
-	                                        }
+		if err := os.WriteFile(wrapperPath, []byte(wrapperContent), 0755); err != nil {
 
-	                        
+			return fmt.Errorf("failed to create wrapper script: %w", err)
 
-	                                        if binScript == "" {
+		}
 
-	                                                binScript = "index.js" // fallback
+		fmt.Printf("Created wrapper at %s\n", wrapperPath)
 
-	                                        }
+		return nil
 
-	                        
+	}
 
-	                                        // Create wrapper script
+	if plan.Toolchain == "python" {
 
-	                                        wrapperPath := filepath.Join(targetDir, m.Name)
+		// Python projects live in their venv
 
-	                                        wrapperContent := fmt.Sprintf("#!/bin/bash\nnode %s/%s \"$@\"\n", appDir, binScript)
+		appDir := filepath.Join(targetDir, m.Name+"-app")
 
-	                                        if runtime.GOOS == "windows" {
+		_ = os.RemoveAll(appDir)
 
-	                                                wrapperPath += ".bat"
+		if err := os.MkdirAll(appDir, 0755); err != nil {
 
-	                                                wrapperContent = fmt.Sprintf("@echo off\nnode %%~dp0\\%s-app\\%s %%*\n", m.Name, binScript)
+			return fmt.Errorf("failed to create app directory: %w", err)
 
-	                                        }
+		}
 
-	                        
+		fmt.Printf("Deploying Python project to %s...\n", appDir)
 
-	                                        if err := os.WriteFile(wrapperPath, []byte(wrapperContent), 0755); err != nil {
+		cpCmd := exec.Command("cp", "-r", workDir+"/.", appDir)
 
-	                                                return fmt.Errorf("failed to create wrapper script: %w", err)
+		if runtime.GOOS == "windows" {
 
-	                                        }
+			cpCmd = exec.Command("xcopy", "/E", "/I", "/Y", workDir, appDir)
 
-	                                                        fmt.Printf("Created wrapper at %s\n", wrapperPath)
+		}
 
-	                                                        return nil
+		if err := cpCmd.Run(); err != nil {
 
-	                                                }
+			return fmt.Errorf("failed to copy python project: %w", err)
 
-	                                        
+		}
 
-	                                                if plan.Toolchain == "python" {
+		// Heuristic to find the binary in venv/bin
 
-	                                                        // Python projects live in their venv
+		venvBinDir := filepath.Join(appDir, "venv", "bin")
 
-	                                                        appDir := filepath.Join(targetDir, m.Name+"-app")
+		if runtime.GOOS == "windows" {
 
-	                                                        _ = os.RemoveAll(appDir)
+			venvBinDir = filepath.Join(appDir, "venv", "Scripts")
 
-	                                                        if err := os.MkdirAll(appDir, 0755); err != nil {
+		}
 
-	                                                                return fmt.Errorf("failed to create app directory: %w", err)
+		entries, _ := os.ReadDir(venvBinDir)
 
-	                                                        }
+		binName := m.Name
 
-	                                        
+		// Look for an exact match or something that looks like the main script
 
-	                                                        fmt.Printf("Deploying Python project to %s...\n", appDir)
+		for _, entry := range entries {
 
-	                                                        cpCmd := exec.Command("cp", "-r", workDir+"/.", appDir)
+			if strings.EqualFold(entry.Name(), m.Name) || strings.EqualFold(entry.Name(), m.Name+".exe") {
 
-	                                                        if runtime.GOOS == "windows" {
+				binName = entry.Name()
 
-	                                                                cpCmd = exec.Command("xcopy", "/E", "/I", "/Y", workDir, appDir)
+				break
 
-	                                                        }
+			}
 
-	                                                        if err := cpCmd.Run(); err != nil {
+		}
 
-	                                                                return fmt.Errorf("failed to copy python project: %w", err)
+		// Create wrapper script
 
-	                                                        }
+		wrapperPath := filepath.Join(targetDir, m.Name)
 
-	                                        
+		wrapperContent := fmt.Sprintf("#!/bin/bash\nexec %s/%s \"$@\"\n", venvBinDir, binName)
 
-	                                                        // Heuristic to find the binary in venv/bin
+		if runtime.GOOS == "windows" {
 
-	                                                        venvBinDir := filepath.Join(appDir, "venv", "bin")
+			wrapperPath += ".bat"
 
-	                                                        if runtime.GOOS == "windows" {
+			wrapperContent = fmt.Sprintf("@echo off\n\"%%~dp0\\%s-app\\venv\\Scripts\\%s\" %%*\n", m.Name, binName)
 
-	                                                                venvBinDir = filepath.Join(appDir, "venv", "Scripts")
+		}
 
-	                                                        }
+		if err := os.WriteFile(wrapperPath, []byte(wrapperContent), 0755); err != nil {
 
-	                                        
+			return fmt.Errorf("failed to create wrapper script: %w", err)
 
-	                                                        entries, _ := os.ReadDir(venvBinDir)
+		}
 
-	                                                        binName := m.Name
+		fmt.Printf("Created wrapper at %s\n", wrapperPath)
 
-	                                                        // Look for an exact match or something that looks like the main script
+		return nil
 
-	                                                        for _, entry := range entries {
+	}
 
-	                                                                if strings.EqualFold(entry.Name(), m.Name) || strings.EqualFold(entry.Name(), m.Name+".exe") {
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
 
-	                                                                        binName = entry.Name()
-
-	                                                                        break
-
-	                                                                }
-
-	                                                        }
-
-	                                        
-
-	                                                        // Create wrapper script
-
-	                                                        wrapperPath := filepath.Join(targetDir, m.Name)
-
-	                                                        wrapperContent := fmt.Sprintf("#!/bin/bash\nexec %s/%s \"$@\"\n", venvBinDir, binName)
-
-	                                                        if runtime.GOOS == "windows" {
-
-	                                                                wrapperPath += ".bat"
-
-	                                                                wrapperContent = fmt.Sprintf("@echo off\n\"%%~dp0\\%s-app\\venv\\Scripts\\%s\" %%*\n", m.Name, binName)
-
-	                                                        }
-
-	                                        
-
-	                                                        if err := os.WriteFile(wrapperPath, []byte(wrapperContent), 0755); err != nil {
-
-	                                                                return fmt.Errorf("failed to create wrapper script: %w", err)
-
-	                                                        }
-
-	                                                        fmt.Printf("Created wrapper at %s\n", wrapperPath)
-
-	                                                        return nil
-
-	                                                }
-
-	                                        
-
-	                                                if err := os.MkdirAll(targetDir, 0755); err != nil {
-
-	                                        
-
-	                        
-
-	        
 		return fmt.Errorf("failed to create target directory: %w", err)
 	}
 
 	dstBin := filepath.Join(targetDir, filepath.Base(plan.Bin))
 	fmt.Printf("Installing %s to %s...\n", srcBin, dstBin)
-	
+
 	// Handle "text file busy" by renaming existing binary first
 	if _, err := os.Stat(dstBin); err == nil {
 		oldBin := dstBin + ".old"
@@ -785,7 +609,6 @@ func (i *Ingestor) downloadAndUnzip(ctx context.Context, url, dest string) error
 	return nil
 }
 
-
 func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, error) {
 	repoURL = normalizeRepoURL(repoURL)
 	var owner, repo string
@@ -796,7 +619,7 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, error
 		// Local path
 		fmt.Printf("Analyzing local repository %s...\n", repoURL)
 		absPath, _ := filepath.Abs(repoURL)
-		
+
 		manifestPath := filepath.Join(absPath, "anyisland.json")
 		if _, err := os.Stat(manifestPath); err == nil {
 			fmt.Println("Found anyisland.json, using provided build plan.")
@@ -847,7 +670,7 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, error
 		// 2. Try to fetch anyisland.json via raw.githubusercontent.com (using curl)
 		rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/anyisland.json", owner, repo, defaultBranch)
 		fmt.Printf("Attempting to fetch manifest from %s\n", rawURL)
-		
+
 		curlCmd := exec.CommandContext(ctx, "curl", "-fsSL", rawURL)
 		output, err := curlCmd.Output()
 		if err == nil {
@@ -881,406 +704,257 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, error
 				readmeContent = content
 			}
 		}
-			}
-	
-			// First-class Go support: Detect go.mod and goreleaser
-			isGo := false
-			hasGoReleaser := false
-			for _, f := range files {
-				if f == "go.mod" {
-					isGo = true
-				}
-				if strings.Contains(f, ".goreleaser.yaml") || strings.Contains(f, ".goreleaser.yml") {
-					hasGoReleaser = true
-				}
-			}
-	
-					if isGo {
-						fmt.Println("detected Go project, optimizing build plan...")
-						var steps []string
-						binName := repo
-						
-						if hasGoReleaser {
-							fmt.Println("found GoReleaser config, using goreleaser for build...")
-							steps = []string{"goreleaser build --snapshot --single-target --clean"}
-							// We assume binName stays same or we try to find it in dist/
-							binName = "dist/" + repo + "_*/" + repo 
-							// Note: Real implementation would parse .goreleaser.yaml to find the exact bin
-						} else {
-							steps = []string{"go build -v -o " + binName}
-						}
-			
-						return &Manifest{
-							Name:    repo,
-							Version: "latest",
-							Build: agent.BuildPlan{
-								Toolchain: "go",
-								Steps:     steps,
-								Bin:       binName,
-							},
-						}, nil
-					}
-			
-					// First-class Flutter support
-					isFlutter := false
-					for _, f := range files {
-						if f == "pubspec.yaml" {
-							// We could read the file to be 100% sure, but pubspec.yaml is a very strong indicator
-							isFlutter = true
-							break
-						}
-					}
-			
-					if isFlutter {
-						fmt.Println("detected Flutter project, optimizing build plan...")
-						targetOS := runtime.GOOS
-						var buildCmd string
-						var binPath string
-			
-						switch targetOS {
-						case "linux":
-							buildCmd = "flutter build linux --release"
-							binPath = "build/linux/x64/release/bundle/"
-						case "darwin":
-							buildCmd = "flutter build macos --release"
-							binPath = "build/macos/Build/Products/Release/" // Simplified, usually .app
-						case "windows":
-							buildCmd = "flutter build windows --release"
-							binPath = "build/windows/runner/Release/"
-						default:
-							return nil, fmt.Errorf("flutter build not supported on %s", targetOS)
-						}
-			
-									return &Manifest{
-			
-										Name:    repo,
-			
-										Version: "latest",
-			
-										Build: agent.BuildPlan{
-			
-											Toolchain: "flutter",
-			
-											Steps: []string{
-			
-												"flutter pub get",
-			
-												buildCmd,
-			
-											},
-			
-											Bin: binPath, // For Flutter, we treat the whole bundle as the "binary"
-			
-										},
-			
-									}, nil
-			
-								}
-			
-						
-			
-								// First-class Node.js/TS support
-			
-								isNode := false
-			
-								isTS := false
-			
-								for _, f := range files {
-			
-									if f == "package.json" {
-			
-										isNode = true
-			
-									}
-			
-									if f == "tsconfig.json" {
-			
-										isTS = true
-			
-									}
-			
-								}
-			
-						
-			
-								if isNode {
-			
-									fmt.Println("detected Node.js project, optimizing build plan...")
-			
-									steps := []string{"npm install"}
-			
-									if isTS {
-			
-										fmt.Println("detected TypeScript, adding build step...")
-			
-										steps = append(steps, "npm run build")
-			
-									} else {
-			
-										// Check for build script in package.json (simplified heuristic)
-			
-										steps = append(steps, "npm run build --if-present")
-			
-									}
-			
-						
-			
-												return &Manifest{
-			
-						
-			
-													Name:    repo,
-			
-						
-			
-													Version: "latest",
-			
-						
-			
-													Build: agent.BuildPlan{
-			
-						
-			
-														Toolchain: "node",
-			
-						
-			
-														Steps:     steps,
-			
-						
-			
-														Bin:       ".", // For Node, we move the whole directory and find the bin in package.json
-			
-						
-			
-													},
-			
-						
-			
-												}, nil
-			
-						
-			
-											}
-			
-						
-			
-									
-			
-						
-			
-											// First-class Rust support
-			
-						
-			
-											isRust := false
-			
-						
-			
-											for _, f := range files {
-			
-						
-			
-												if f == "Cargo.toml" {
-			
-						
-			
-													isRust = true
-			
-						
-			
-													break
-			
-						
-			
-												}
-			
-						
-			
-											}
-			
-						
-			
-									
-			
-						
-			
-											if isRust {
-			
-						
-			
-												fmt.Println("detected Rust project, optimizing build plan...")
-			
-						
-			
-															return &Manifest{
-			
-						
-			
-																Name:    repo,
-			
-						
-			
-																Version: "latest",
-			
-						
-			
-																Build: agent.BuildPlan{
-			
-						
-			
-																	Toolchain: "rust",
-			
-						
-			
-																	Steps:     []string{"cargo build --release"},
-			
-						
-			
-																	Bin:       "target/release/" + repo,
-			
-						
-			
-																},
-			
-						
-			
-															}, nil
-			
-						
-			
-														}
-			
-						
-			
-												
-			
-						
-			
-														// First-class Python support
-			
-						
-			
-														isPython := false
-			
-						
-			
-														for _, f := range files {
-			
-						
-			
-															if f == "requirements.txt" || f == "pyproject.toml" || f == "setup.py" {
-			
-						
-			
-																isPython = true
-			
-						
-			
-																break
-			
-						
-			
-															}
-			
-						
-			
-														}
-			
-						
-			
-												
-			
-						
-			
-														if isPython {
-			
-						
-			
-															fmt.Println("detected Python project, optimizing build plan...")
-			
-						
-			
-															return &Manifest{
-			
-						
-			
-																Name:    repo,
-			
-						
-			
-																Version: "latest",
-			
-						
-			
-																Build: agent.BuildPlan{
-			
-						
-			
-																	Toolchain: "python",
-			
-						
-			
-																	Steps: []string{
-			
-						
-			
-																		"python3 -m venv venv",
-			
-						
-			
-																		"./venv/bin/pip install --upgrade pip",
-			
-						
-			
-																		"./venv/bin/pip install .", // Try to install as a package
-			
-						
-			
-																	},
-			
-						
-			
-																	Bin: "venv", // We mark venv as the target for specialized handling
-			
-						
-			
-																},
-			
-						
-			
-															}, nil
-			
-						
-			
-														}
-			
-						
-			
-												
-			
-						
-			
-														// ... (logic to get files and readmeContent) ...
+	}
 
-		// Discretion Check
-		discretion := agent.AnalyzeDiscretion(files, readmeContent)
-		if !discretion.Allowed {
-			return nil, fmt.Errorf("Ingestion declined: %s", discretion.Reason)
+	// First-class Go support: Detect go.mod and goreleaser
+	isGo := false
+	hasGoReleaser := false
+	for _, f := range files {
+		if f == "go.mod" {
+			isGo = true
+		}
+		if strings.Contains(f, ".goreleaser.yaml") || strings.Contains(f, ".goreleaser.yml") {
+			hasGoReleaser = true
+		}
+	}
+
+	if isGo {
+		fmt.Println("detected Go project, optimizing build plan...")
+		var steps []string
+		binName := repo
+
+		if hasGoReleaser {
+			fmt.Println("found GoReleaser config, using goreleaser for build...")
+			steps = []string{"goreleaser build --snapshot --single-target --clean"}
+			// We assume binName stays same or we try to find it in dist/
+			binName = "dist/" + repo + "_*/" + repo
+			// Note: Real implementation would parse .goreleaser.yaml to find the exact bin
+		} else {
+			steps = []string{"go build -v -o " + binName}
 		}
 
-		fmt.Println("Generating build plan via AI...")
-			
-						
-			
-												
-			
-						
-			
-									
-			
-						
-				plan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
+		return &Manifest{
+			Name:    repo,
+			Version: "latest",
+			Build: agent.BuildPlan{
+				Toolchain: "go",
+				Steps:     steps,
+				Bin:       binName,
+			},
+		}, nil
+	}
+
+	// First-class Flutter support
+	isFlutter := false
+	for _, f := range files {
+		if f == "pubspec.yaml" {
+			// We could read the file to be 100% sure, but pubspec.yaml is a very strong indicator
+			isFlutter = true
+			break
+		}
+	}
+
+	if isFlutter {
+		fmt.Println("detected Flutter project, optimizing build plan...")
+		targetOS := runtime.GOOS
+		var buildCmd string
+		var binPath string
+
+		switch targetOS {
+		case "linux":
+			buildCmd = "flutter build linux --release"
+			binPath = "build/linux/x64/release/bundle/"
+		case "darwin":
+			buildCmd = "flutter build macos --release"
+			binPath = "build/macos/Build/Products/Release/" // Simplified, usually .app
+		case "windows":
+			buildCmd = "flutter build windows --release"
+			binPath = "build/windows/runner/Release/"
+		default:
+			return nil, fmt.Errorf("flutter build not supported on %s", targetOS)
+		}
+
+		return &Manifest{
+
+			Name: repo,
+
+			Version: "latest",
+
+			Build: agent.BuildPlan{
+
+				Toolchain: "flutter",
+
+				Steps: []string{
+
+					"flutter pub get",
+
+					buildCmd,
+				},
+
+				Bin: binPath, // For Flutter, we treat the whole bundle as the "binary"
+
+			},
+		}, nil
+
+	}
+
+	// First-class Node.js/TS support
+
+	isNode := false
+
+	isTS := false
+
+	for _, f := range files {
+
+		if f == "package.json" {
+
+			isNode = true
+
+		}
+
+		if f == "tsconfig.json" {
+
+			isTS = true
+
+		}
+
+	}
+
+	if isNode {
+
+		fmt.Println("detected Node.js project, optimizing build plan...")
+
+		steps := []string{"npm install"}
+
+		if isTS {
+
+			fmt.Println("detected TypeScript, adding build step...")
+
+			steps = append(steps, "npm run build")
+
+		} else {
+
+			// Check for build script in package.json (simplified heuristic)
+
+			steps = append(steps, "npm run build --if-present")
+
+		}
+
+		return &Manifest{
+
+			Name: repo,
+
+			Version: "latest",
+
+			Build: agent.BuildPlan{
+
+				Toolchain: "node",
+
+				Steps: steps,
+
+				Bin: ".", // For Node, we move the whole directory and find the bin in package.json
+
+			},
+		}, nil
+
+	}
+
+	// First-class Rust support
+
+	isRust := false
+
+	for _, f := range files {
+
+		if f == "Cargo.toml" {
+
+			isRust = true
+
+			break
+
+		}
+
+	}
+
+	if isRust {
+
+		fmt.Println("detected Rust project, optimizing build plan...")
+
+		return &Manifest{
+
+			Name: repo,
+
+			Version: "latest",
+
+			Build: agent.BuildPlan{
+
+				Toolchain: "rust",
+
+				Steps: []string{"cargo build --release"},
+
+				Bin: "target/release/" + repo,
+			},
+		}, nil
+
+	}
+
+	// First-class Python support
+
+	isPython := false
+
+	for _, f := range files {
+
+		if f == "requirements.txt" || f == "pyproject.toml" || f == "setup.py" {
+
+			isPython = true
+
+			break
+
+		}
+
+	}
+
+	if isPython {
+
+		fmt.Println("detected Python project, optimizing build plan...")
+
+		return &Manifest{
+
+			Name: repo,
+
+			Version: "latest",
+
+			Build: agent.BuildPlan{
+
+				Toolchain: "python",
+
+				Steps: []string{
+
+					"python3 -m venv venv",
+
+					"./venv/bin/pip install --upgrade pip",
+
+					"./venv/bin/pip install .", // Try to install as a package
+
+				},
+
+				Bin: "venv", // We mark venv as the target for specialized handling
+
+			},
+		}, nil
+
+	}
+
+	// ... (logic to get files and readmeContent) ...
+
+	// Discretion Check
+	discretion := agent.AnalyzeDiscretion(files, readmeContent)
+	if !discretion.Allowed {
+		return nil, fmt.Errorf("Ingestion declined: %s", discretion.Reason)
+	}
+
+	fmt.Println("Generating build plan via AI...")
+
+	plan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
 	if err != nil {
 		return nil, err
 	}
@@ -1305,4 +979,3 @@ func normalizeRepoURL(url string) string {
 	}
 	return url
 }
-
