@@ -122,6 +122,17 @@ Anyisland provides optimized support for the JavaScript and TypeScript ecosystem
 
 ---
 
+## First-Class Rust Support
+
+Anyisland provides high-performance support for the Rust ecosystem.
+
+1. **Automatic Detection**: When a `Cargo.toml` file is found, Anyisland identifies the project as a Rust codebase.
+2. **Release Optimization**: It defaults to `cargo build --release` to ensure the resulting binary is fully optimized for production use.
+3. **Binary Extraction**: Anyisland automatically locates the compiled binary in `target/release/` and installs it to your system.
+4. **Statically Linked**: Since Rust typically produces statically linked binaries, Anyisland installs them directly without requiring extra wrappers, ensuring native performance.
+
+---
+
 #### How Anyisland Handles Installation
 1. **Build**: Runs `steps` in the source directory.
 2. **Locate**: Finds the binary at the path specified in `bin`.

@@ -155,21 +155,67 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) error
 
 	        
 
-	        // Go-specific Pre-build check
+	                // Go-specific Pre-build check
 
-	        if plan.Toolchain == "go" {
+	        
 
-	                if _, err := exec.LookPath("go"); err != nil {
+	                if plan.Toolchain == "go" {
 
-	                        return fmt.Errorf("go toolchain required but not found in PATH")
+	        
+
+	                        if _, err := exec.LookPath("go"); err != nil {
+
+	        
+
+	                                return fmt.Errorf("go toolchain required but not found in PATH")
+
+	        
+
+	                        }
+
+	        
 
 	                }
 
-	        }
+	        
 
-	
+	                
 
-	        for _, step := range plan.Steps {
+	        
+
+	                // Rust-specific Pre-build check
+
+	        
+
+	                if plan.Toolchain == "rust" {
+
+	        
+
+	                        if _, err := exec.LookPath("cargo"); err != nil {
+
+	        
+
+	                                return fmt.Errorf("rust toolchain (cargo) required but not found in PATH")
+
+	        
+
+	                        }
+
+	        
+
+	                }
+
+	        
+
+	        
+
+	        
+
+	                for _, step := range plan.Steps {
+
+	        
+
+	        
 
 	
 		fmt.Printf("Executing: %s\n", step)
@@ -773,29 +819,251 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, error
 			
 						
 			
-									return &Manifest{
-			
-										Name:    repo,
-			
-										Version: "latest",
-			
-										Build: agent.BuildPlan{
-			
-											Toolchain: "node",
-			
-											Steps:     steps,
-			
-											Bin:       ".", // For Node, we move the whole directory and find the bin in package.json
-			
-										},
-			
-									}, nil
-			
-								}
+												return &Manifest{
 			
 						
 			
-								fmt.Println("Generating build plan via AI...")
+													Name:    repo,
+			
+						
+			
+													Version: "latest",
+			
+						
+			
+													Build: agent.BuildPlan{
+			
+						
+			
+														Toolchain: "node",
+			
+						
+			
+														Steps:     steps,
+			
+						
+			
+														Bin:       ".", // For Node, we move the whole directory and find the bin in package.json
+			
+						
+			
+													},
+			
+						
+			
+												}, nil
+			
+						
+			
+											}
+			
+						
+			
+									
+			
+						
+			
+											// First-class Rust support
+			
+						
+			
+											isRust := false
+			
+						
+			
+											for _, f := range files {
+			
+						
+			
+												if f == "Cargo.toml" {
+			
+						
+			
+													isRust = true
+			
+						
+			
+													break
+			
+						
+			
+												}
+			
+						
+			
+											}
+			
+						
+			
+									
+			
+						
+			
+											if isRust {
+			
+						
+			
+												fmt.Println("detected Rust project, optimizing build plan...")
+			
+						
+			
+															return &Manifest{
+			
+						
+			
+																Name:    repo,
+			
+						
+			
+																Version: "latest",
+			
+						
+			
+																Build: agent.BuildPlan{
+			
+						
+			
+																	Toolchain: "rust",
+			
+						
+			
+																	Steps:     []string{"cargo build --release"},
+			
+						
+			
+																	Bin:       "target/release/" + repo,
+			
+						
+			
+																},
+			
+						
+			
+															}, nil
+			
+						
+			
+														}
+			
+						
+			
+												
+			
+						
+			
+														// First-class Python support
+			
+						
+			
+														isPython := false
+			
+						
+			
+														for _, f := range files {
+			
+						
+			
+															if f == "requirements.txt" || f == "pyproject.toml" || f == "setup.py" {
+			
+						
+			
+																isPython = true
+			
+						
+			
+																break
+			
+						
+			
+															}
+			
+						
+			
+														}
+			
+						
+			
+												
+			
+						
+			
+														if isPython {
+			
+						
+			
+															fmt.Println("detected Python project, optimizing build plan...")
+			
+						
+			
+															return &Manifest{
+			
+						
+			
+																Name:    repo,
+			
+						
+			
+																Version: "latest",
+			
+						
+			
+																Build: agent.BuildPlan{
+			
+						
+			
+																	Toolchain: "python",
+			
+						
+			
+																	Steps: []string{
+			
+						
+			
+																		"python3 -m venv venv",
+			
+						
+			
+																		"./venv/bin/pip install --upgrade pip",
+			
+						
+			
+																		"./venv/bin/pip install .", // Try to install as a package
+			
+						
+			
+																	},
+			
+						
+			
+																	Bin: "venv", // We mark venv as the target for specialized handling
+			
+						
+			
+																},
+			
+						
+			
+															}, nil
+			
+						
+			
+														}
+			
+						
+			
+												
+			
+						
+			
+														fmt.Println("Generating build plan via AI...")
+			
+						
+			
+												
+			
+						
+			
+									
 			
 						
 				plan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
