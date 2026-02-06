@@ -11,32 +11,29 @@ type FeatureItem = {
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Easy to Use',
+    title: 'AI-Powered Ingestion',
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        Transform any GitHub repository into an installed tool through intelligent source analysis and automated build plan generation.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
+    title: 'Platform Agnostic',
     Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        Built on a Platform Abstraction Layer (PAL), Anyisland provides a unified experience across Linux, macOS, and Windows.
       </>
     ),
   },
   {
-    title: 'Powered by React',
+    title: 'Sovereign Environment',
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        Manage your own user-space "Island" with decentralized state synchronization via Git and secure, encrypted shell history.
       </>
     ),
   },
