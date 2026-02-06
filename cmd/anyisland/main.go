@@ -1,20 +1,24 @@
 package main
 
 import (
-        "fmt"
-        "os"
-        "path/filepath"
-        "runtime"
-                "strings"
-                "github.com/spf13/cobra"
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"syscall"
+
+	"github.com/nathfavour/anyisland/internal/agent"
+	"github.com/nathfavour/anyisland/internal/cli"
+	"github.com/nathfavour/anyisland/internal/crypto"
+	"github.com/nathfavour/anyisland/internal/history"
 	"github.com/nathfavour/anyisland/internal/pal"
 	"github.com/nathfavour/anyisland/internal/registry"
-	"github.com/nathfavour/anyisland/internal/cli"
-	"github.com/nathfavour/anyisland/internal/agent"
-	"github.com/nathfavour/anyisland/internal/history"
-	"github.com/nathfavour/anyisland/internal/crypto"
-)
-var (
+	"github.com/nathfavour/anyisland/pkg/discovery"
+	"github.com/spf13/cobra"
+)var (
 	sourceFlag string
 
 	rootCmd = &cobra.Command{
@@ -910,21 +914,89 @@ var (
 	                                                                        }
 	                                                                        defer reg.Close()
 	                                        
-	                                                                        broker := cli.NewUpdateBroker(sys, reg)
-	                                                                        go func() {
-	                                                                                if err := broker.Start(ctx); err != nil {
-	                                                                                        fmt.Printf("Broker error: %v\n", err)
-	                                                                                }
-	                                                                        }()
+	                                                                                                        broker := cli.NewUpdateBroker(sys, reg)
 	                                        
-	                                                                        // Start Discovery Server (UDP)
-	                                                                        // We'll need to import discovery package
-	                                                                        // ... (logic would go here)
+	                                                                                                        go func() {
+	                                        
+	                                                                                                                if err := broker.Start(ctx); err != nil {
+	                                        
+	                                                                                                                        fmt.Printf("Broker error: %v\n", err)
+	                                        
+	                                                                                                                }
+	                                        
+	                                                                                                        }()
+	                                        
 	                                                                        
-	                                                                        <-ctx.Done()
-	                                                                        return nil
-	                                                                },
-	                                                        }	                rollbackCmd = &cobra.Command{
+	                                        
+	                                                                                                        // Start Discovery Server (UDP)
+	                                        
+	                                                                                                        srv, err := discovery.NewServer(1995)
+	                                        
+	                                                                                                        if err != nil {
+	                                        
+	                                                                                                                return fmt.Errorf("failed to start discovery server: %w", err)
+	                                        
+	                                                                                                        }
+	                                        
+	                                                                                                        defer srv.Close()
+	                                        
+	                                                                        
+	                                        
+	                                                                                                        fmt.Println("Anyisland Daemon listening on UDP :1995 and UDS :anyisland.sock")
+	                                        
+	                                                                        
+	                                        
+	                                                                                                        go func() {
+	                                        
+	                                                                                                                err = srv.Listen(func(p discovery.Packet) {
+	                                        
+	                                                                                                                        fmt.Printf("Received packet: %+v\n", p)
+	                                        
+	                                                                                                                        if p.Op == "REGISTER" {
+	                                        
+	                                                                                                                                err := reg.RegisterTool(registry.Tool{
+	                                        
+	                                                                                                                                        Name:    p.Name,
+	                                        
+	                                                                                                                                        Source:  p.Source,
+	                                        
+	                                                                                                                                        Version: p.Version,
+	                                        
+	                                                                                                                                        Type:    p.Type,
+	                                        
+	                                                                                                                                })
+	                                        
+	                                                                                                                                if err != nil {
+	                                        
+	                                                                                                                                        fmt.Printf("failed to register tool: %v\n", err)
+	                                        
+	                                                                                                                                } else {
+	                                        
+	                                                                                                                                        fmt.Printf("Registered tool: %s\n", p.Name)
+	                                        
+	                                                                                                                                }
+	                                        
+	                                                                                                                        }
+	                                        
+	                                                                                                                })
+	                                        
+	                                                                                                                if err != nil {
+	                                        
+	                                                                                                                        fmt.Printf("Discovery server error: %v\n", err)
+	                                        
+	                                                                                                                }
+	                                        
+	                                                                                                        }()
+	                                        
+	                                                                                                        
+	                                        
+	                                                                                                        <-ctx.Done()
+	                                        
+	                                                                                                        return nil
+	                                        
+	                                                                                                },
+	                                        
+	                                                                                        }	                rollbackCmd = &cobra.Command{
 	                        Use:   "rollback",
 	                        Short: "Rollback to the previous version of Anyisland",
 	                        RunE: func(cmd *cobra.Command, args []string) error {
@@ -1330,6 +1402,10 @@ func init() {
         rootCmd.AddCommand(uninstallCmd)
 
         rootCmd.AddCommand(configCmd)
+
+        rootCmd.AddCommand(daemonCmd)
+
+        daemonCmd.AddCommand(daemonStartCmd)
 
         configCmd.AddCommand(configSetCmd)
 
