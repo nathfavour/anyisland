@@ -2,12 +2,6 @@
 
 AI-powered, platform-agnostic, and decentralized package manager.
 
-## Installation
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install.sh | bash
-```
-
 ## Documentation
 
 Full documentation is available at [nathfavour.github.io/anyisland/](https://nathfavour.github.io/anyisland/).
@@ -20,9 +14,16 @@ Full documentation is available at [nathfavour.github.io/anyisland/](https://nat
 
 ## Quick Start
 
-### 1. Installation
+### 1. Install, Update & Uninstall
 ```bash
+# Install Anyisland
 curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install.sh | bash
+
+# Update (Anyisland updates automatically on every run, but you can force it)
+anyisland update anyisland
+
+# Uninstall Anyisland
+anyisland uninstall
 ```
 
 ### 2. Setup

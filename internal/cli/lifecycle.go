@@ -149,7 +149,8 @@ func (m *LifecycleManager) CheckAnyislandUpdate(ctx context.Context, ag agent.Sy
 		return "", false, err
 	}
 
-	if latestCommit == Commit && Commit != "none" {
+	curCommit := GetEffectiveCommit()
+	if latestCommit == curCommit && curCommit != "none" {
 		return latestCommit, false, nil
 	}
 
@@ -171,15 +172,26 @@ func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Sy
 		return
 	}
 
-	// 1. Fast check
+	// 1. Smart Cooldown: Only check every 5 minutes unless forced
+	now := time.Now().Unix()
+	if now-cfg.Update.LastCheck < 300 {
+		return
+	}
+
+	// 2. Fast check
 	latest, available, err := m.CheckAnyislandUpdate(ctx, ag)
+	
+	// Update last check time regardless of success to prevent hammering on network failure
+	cfg.Update.LastCheck = now
+	cm.Save(cfg)
+
 	if err != nil || !available {
 		return
 	}
 
 	fmt.Printf("🚀 New version found (%s). Auto-updating Anyisland...\n", latest[:7])
 
-	// 2. Silent update
+	// 3. Silent update
 	ingestor := NewIngestor(ag, m.sys)
 	manifest, _, err := ingestor.Ingest(ctx, "https://github.com/nathfavour/anyisland")
 	if err != nil {
