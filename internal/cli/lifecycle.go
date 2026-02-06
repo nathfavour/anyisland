@@ -232,7 +232,7 @@ func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Sy
 		})
 	}
 	
-	fmt.Printf("✨ Anyisland auto-updated to %s. Restarting...\n", latest[:7])
+	fmt.Printf("✨ Anyisland auto-updated to %s. Restarting...\n", ShortCommit(latest))
 	
 	// HotSwap to the new binary and re-run the original command
 	// We pass a signal that we just updated to avoid redundant "already up to date" messages

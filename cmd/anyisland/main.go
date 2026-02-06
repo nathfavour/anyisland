@@ -304,19 +304,18 @@ var (
 			                        }
 			                        defer reg.Close()
 			
-			                        existing, _ := reg.GetTool(manifest.Name)
-			                        if existing != nil {
-			                                if existing.LastCommit == commit {
-			                                        if ingestor.VerifyToolIntegrity(existing.InstallPath, existing.BinaryHash) {
-			                                                fmt.Printf("%s is already up-to-date and healthy (commit: %s)\n", manifest.Name, commit[:7])
-			                                                return nil
-			                                        }
-			                                        fmt.Printf("%s seems broken. Reinstalling...\n", manifest.Name)
-			                                } else {
-			                                        fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, existing.LastCommit[:7], commit[:7])
-			                                }
-			                        }
-			
+			                                                                        existing, _ := reg.GetTool(manifest.Name)
+			                                                                        if existing != nil {
+			                                                                                if existing.LastCommit == commit {
+			                                                                                        if ingestor.VerifyToolIntegrity(existing.InstallPath, existing.BinaryHash) {
+			                                                                                                fmt.Printf("%s is already up-to-date and healthy (commit: %s)\n", manifest.Name, cli.ShortCommit(commit))
+			                                                                                                return nil
+			                                                                                        }
+			                                                                                        fmt.Printf("%s seems broken. Reinstalling...\n", manifest.Name)
+			                                                                                } else {
+			                                                                                        fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, cli.ShortCommit(existing.LastCommit), cli.ShortCommit(commit))
+			                                                                                }
+			                                                                        }			
 			                        fmt.Println("\nProposed Build Plan:")
 			                        for _, step := range manifest.Build.Steps {
 			                                fmt.Printf("  - %s\n", step)
@@ -685,19 +684,18 @@ var (
 			                        }
 			                        defer reg.Close()
 			
-			                        existing, _ := reg.GetTool(manifest.Name)
-			                        if existing != nil {
-			                                if existing.LastCommit == commit {
-			                                        if ingestor.VerifyToolIntegrity(existing.InstallPath, existing.BinaryHash) {
-			                                                fmt.Printf("%s is already up-to-date and healthy (commit: %s)\n", manifest.Name, commit[:7])
-			                                                return nil
-			                                        }
-			                                        fmt.Printf("%s seems broken. Reinstalling...\n", manifest.Name)
-			                                } else {
-			                                        fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, existing.LastCommit[:7], commit[:7])
-			                                }
-			                        }
-			
+			                                                                        existing, _ := reg.GetTool(manifest.Name)
+			                                                                        if existing != nil {
+			                                                                                if existing.LastCommit == commit {
+			                                                                                        if ingestor.VerifyToolIntegrity(existing.InstallPath, existing.BinaryHash) {
+			                                                                                                fmt.Printf("%s is already up-to-date and healthy (commit: %s)\n", manifest.Name, cli.ShortCommit(commit))
+			                                                                                                return nil
+			                                                                                        }
+			                                                                                        fmt.Printf("%s seems broken. Reinstalling...\n", manifest.Name)
+			                                                                                } else {
+			                                                                                        fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, cli.ShortCommit(existing.LastCommit), cli.ShortCommit(commit))
+			                                                                                }
+			                                                                        }			
 			                        fmt.Println("\nProposed Build Plan:")
 			                        for _, step := range manifest.Build.Steps {
 			                                fmt.Printf("  - %s\n", step)
