@@ -790,114 +790,135 @@ var (
 	                                        return err
 	                                }
 	        
-	                                                        if len(args) == 0 || args[0] == "anyisland" {
+	                                                                                                                        if len(args) == 0 || args[0] == "anyisland" {
 	        
-	                                                                fmt.Println("Checking for Anyisland updates...")
+	                                                                                                                                lm := cli.NewLifecycleManager(sys)
 	        
-	                                                                lm := cli.NewLifecycleManager(sys)
+	                                                                                                                                ag := getSynthesizer()
 	        
-	                                                                ag := getSynthesizer()
+	                                                                                                                                
 	        
-	                                                                
+	                                                                                                                                latest, available, err := lm.CheckAnyislandUpdate(cmd.Context(), ag)
 	        
-	                                                                latest, available, err := lm.CheckAnyislandUpdate(cmd.Context(), ag)
+	                                                                                                                                if err != nil {
 	        
-	                                                                if err != nil {
+	                                                                                                                                        return fmt.Errorf("failed to check for updates: %w", err)
 	        
-	                                                                        return fmt.Errorf("failed to check for updates: %w", err)
+	                                                                                                                                }
 	        
-	                                                                }
+	                                                                                                
 	        
-	                                
+	                                                                                                                                if !available {
 	        
-	                                                                if !available {
+	                                                                                                                                        if len(args) > 0 {
 	        
-	                                                                        fmt.Printf("Anyisland is already at the latest version (%s).\n", latest[:7])
-	        
-	                                                                        return nil
-	        
-	                                                                }
-	        
-	                                
-	        
-	                                                                fmt.Printf("A new version of Anyisland is available: %s\n", latest[:7])
-	        
-	                                                                fmt.Print("Would you like to download and install it? (y/N): ")
-	        
-	                                                                
-	        
-	                                                                var response string
-	        
-	                                                                fmt.Scanln(&response)
-	        
-	                                                                if strings.ToLower(response) != "y" {
-	        
-	                                                                        fmt.Println("Update cancelled.")
-	        
-	                                                                        return nil
-	        
-	                                                                }
-	        
-	                                
-	        
-	                                                                                                                                        // Perform the real update via Ingestor
-	        
-	                                
-	        
-	                                                                                                                                        ingestor := cli.NewIngestor(ag, sys)
-	        
-	                                
-	        
-	                                                                                                                                        manifest, _, err := ingestor.Ingest(cmd.Context(), "https://github.com/nathfavour/anyisland")
-	        
-	                                
-	        
-	                                                                                                                                        if err != nil {
-	        
-	                                
-	        
-	                                                                                                                                                return err
-	        
-	                                
+	                                                                                                                                                fmt.Printf("Anyisland is already at the latest version (%s).\n", latest[:7])
 	        
 	                                                                                                                                        }
 	        
-	                                
+	                                                                                                                                        // If no args, we just continue to update other tools
 	        
-	                                                                
+	                                                                                                                                        if len(args) == 0 {
 	        
-	                                
-	        
-	                                                                                                                                        fmt.Println("Downloading and building latest version...")
-	        
-	                                
-	        
-	                                                                                                                                        if _, _, err := ingestor.Build(cmd.Context(), manifest, "https://github.com/nathfavour/anyisland"); err != nil {
-	        
-	                                
-	        
-	                                                                                                                                                return err
-	        
-	                                
+	                                                                                                                                                goto updateTools
 	        
 	                                                                                                                                        }
 	        
-	                                
+	                                                                                                                                        return nil
 	        
-	                                                                
+	                                                                                                                                }
 	        
-	                                
+	                                                                        
 	        
-	                                                                fmt.Println("✅ Anyisland has been updated successfully!")
+	                                                                                                                                fmt.Printf("A new version of Anyisland is available: %s\n", latest[:7])
 	        
-	                                                                fmt.Println("The daemon will be notified to hot-swap on the next pulse.")
+	                                                                                                                                fmt.Print("Would you like to download and install it? (y/N): ")
 	        
-	                                                                return nil
+	                                                                                                                                
 	        
-	                                                        }
+	                                                                                                                                var response string
 	        
-	                                
-	        	                        reg, err := registry.Open(sys.GetIslandDir())
+	                                                                                                                                fmt.Scanln(&response)
+	        
+	                                                                                                                                if strings.ToLower(response) != "y" {
+	        
+	                                                                                                                                        fmt.Println("Update cancelled.")
+	        
+	                                                                                                                                        if len(args) == 0 {
+	        
+	                                                                                                                                                goto updateTools
+	        
+	                                                                                                                                        }
+	        
+	                                                                                                                                        return nil
+	        
+	                                                                                                                                }
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                        // Perform the real update via Ingestor
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                        ingestor := cli.NewIngestor(ag, sys)
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                        manifest, commit, err := ingestor.Ingest(cmd.Context(), "https://github.com/nathfavour/anyisland")
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                        if err != nil {
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                return err
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                        }
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                        
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                        fmt.Printf("Downloading and building latest version (%s)...\n", commit[:7])
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                        if _, _, err := ingestor.Build(cmd.Context(), manifest, "https://github.com/nathfavour/anyisland"); err != nil {
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                                return err
+	        
+	                                                                                                
+	        
+	                                                                                                                                                                                                        }
+	        
+	                                                                                                
+	        
+	                                                                                                                                
+	        
+	                                                                                                
+	        
+	                                                                                                                                fmt.Println("✅ Anyisland has been updated successfully!")
+	        
+	                                                                                                                                lm.HotSwap()
+	        
+	                                                                                                                                return nil
+	        
+	                                                                                                                        }
+	        
+	                                                                        
+	        
+	                                                                                                        updateTools:
+	        
+	                                                                                                        reg, err := registry.Open(sys.GetIslandDir())
+	        
+	                                                        
 	                        if err != nil {
 	                                return err
 	                        }

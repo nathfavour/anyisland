@@ -171,19 +171,31 @@ func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Sy
 		return
 	}
 
+	fmt.Printf("🚀 New version found (%s). Updating Anyisland...\n", latest[:7])
+
 	// 2. Silent update
 	ingestor := NewIngestor(ag, m.sys)
 	manifest, _, err := ingestor.Ingest(ctx, "https://github.com/nathfavour/anyisland")
 	if err != nil {
+		fmt.Printf("⚠️ Auto-update ingestion failed: %v\n", err)
 		return
 	}
 
 	// Build and install the latest version
-	_, _, _ = ingestor.Build(ctx, manifest, "https://github.com/nathfavour/anyisland")
+	_, _, err = ingestor.Build(ctx, manifest, "https://github.com/nathfavour/anyisland")
+	if err != nil {
+		fmt.Printf("⚠️ Auto-update build failed: %v\n", err)
+		return
+	}
 	
-	// We don't HotSwap here to avoid interrupting the current command, 
-	// but the next run will use the new binary.
-	fmt.Printf("✨ Anyisland auto-updated to %s\n", latest[:7])
+	fmt.Printf("✨ Anyisland auto-updated to %s. Restarting...\n", latest[:7])
+	
+	// HotSwap to the new binary and re-run the original command
+	if err := m.HotSwap(); err != nil {
+		fmt.Printf("⚠️ Failed to restart after update: %v\n", err)
+		return
+	}
+	os.Exit(0)
 }
 
 func syscallExec(argv0 string, argv []string, envv []string) error {
