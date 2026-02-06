@@ -363,11 +363,12 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		manifestPath := filepath.Join(absPath, "anyisland.json")
 		if _, err := os.Stat(manifestPath); err == nil {
 			m, err := LoadManifest(manifestPath)
-			if err == nil {
-				if m.Name == "anyisland" {
-				                                      return nil, commit, fmt.Errorf("this local path identifies as Anyisland. Management via 'install' is not allowed")
-				                                }				return m, commit, nil
-			}
+			                        if err == nil {
+			                                if m.Name == "anyisland" {
+			                                      return nil, commit, fmt.Errorf("this local path identifies as Anyisland. Management via 'install' is not allowed")
+			                                }
+			                                return m, commit, nil
+			                        }
 		}
 
 		repo = filepath.Base(absPath)
@@ -402,11 +403,12 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		output, err := curlCmd.Output()
 		if err == nil {
 			var m Manifest
-			if err := json.Unmarshal(output, &m); err == nil {
-				if m.Name == "anyisland" {
-				                                      return nil, commit, fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
-				                                }				return &m, commit, nil
-			}
+			                        if err := json.Unmarshal(output, &m); err == nil {
+			                                if m.Name == "anyisland" {
+			                                      return nil, commit, fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
+			                                }
+			                                return &m, commit, nil
+			                        }
 		}
 
 		tree, _, err := i.gh.Git.GetTree(ctx, owner, repo, defaultBranch, true)

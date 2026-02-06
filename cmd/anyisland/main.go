@@ -17,10 +17,11 @@ import (
 	"github.com/nathfavour/anyisland/internal/pal"
 	"github.com/nathfavour/anyisland/internal/registry"
 	"github.com/nathfavour/anyisland/pkg/discovery"
-	"github.com/spf13/cobra"
-)var (
-	sourceFlag string
-
+		"github.com/spf13/cobra"
+	)
+	
+	var (
+		sourceFlag string
 	rootCmd = &cobra.Command{
 		Use:   "anyisland",
 		Short: "Anyisland is an AI-powered package manager",
