@@ -130,6 +130,20 @@ func (r *Registry) GetTool(name string) (*Tool, error) {
 	return &t, nil
 }
 
+func (r *Registry) GetToolByPath(path string) (*Tool, error) {
+	query := `SELECT id, name, source, version, COALESCE(last_commit, ''), COALESCE(binary_hash, ''), COALESCE(install_path, ''), type FROM tools WHERE install_path = ?`
+	row := r.db.QueryRow(query, path)
+	var t Tool
+	err := row.Scan(&t.ID, &t.Name, &t.Source, &t.Version, &t.LastCommit, &t.BinaryHash, &t.InstallPath, &t.Type)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
 func (r *Registry) ListTools() ([]Tool, error) {
 	query := `SELECT id, name, source, version, COALESCE(last_commit, ''), COALESCE(binary_hash, ''), COALESCE(install_path, ''), type FROM tools`
 	rows, err := r.db.Query(query)

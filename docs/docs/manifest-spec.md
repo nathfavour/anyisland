@@ -53,6 +53,8 @@ The `anyisland.json` file is the primary configuration for Anyisland-aware tools
 | `dependencies` | `array[string]` | System packages required for the tool to function. |
 | `daemon` | `boolean` | If true, Anyisland will treat this as a long-running service. |
 | `pulse` | `boolean` | If true, the tool is **Anyisland Pulse Aware** and can receive OTA update notifications from the local daemon. |
+| `managed_updates` | `boolean` | If false, Anyisland will skip auto-updating this tool. Defaults to true. |
+| `update_command` | `string` | A custom command to run when an update is available (e.g., `mytool upgrade`). |
 
 ---
 
@@ -62,8 +64,24 @@ The `anyisland.json` file is the primary configuration for Anyisland-aware tools
 
 ### How it Works
 1. **Centralized Polling**: `anyisland daemon` fetches update metadata for all registered tools in the background.
-2. **Local IPC**: Tools can query the local Unix Domain Socket at `~/.anyisland/anyisland.sock` to check for updates without touching the network.
-3. **Push Notifications**: Tools with `pulse: true` can subscribe to the socket to receive immediate push notifications when an update is available.
+2. **Local IPC**: Tools can query the local Unix Domain Socket at `~/.anyisland/anyisland.sock` to check for updates or verify their "Managed" status.
+3. **Identity Handshake**: Tools can verify if they are being managed by Anyisland by sending a `HANDSHAKE` op to the socket. Anyisland uses OS-level peer verification to identify the tool by its PID and executable path.
+4. **Push Notifications**: Tools with `pulse: true` can subscribe to the socket to receive immediate push notifications when an update is available.
+
+### Pulse Handshake Protocol
+To check if the current process is managed by Anyisland:
+1. Connect to `~/.anyisland/anyisland.sock`.
+2. Send: `{"op": "HANDSHAKE"}`.
+3. Receive: 
+```json
+{
+  "status": "MANAGED",
+  "tool_id": "my-tool",
+  "version": "v1.2.0",
+  "anyisland_version": "v0.5.0"
+}
+```
+If the tool is not managed, it returns `{"status": "UNMANAGED"}`.
 
 ### Why use Pulse?
 - **Zero Bandwidth**: Your tool doesn't need its own update-checking logic.

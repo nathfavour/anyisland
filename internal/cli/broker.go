@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/nathfavour/anyisland/internal/agent"
@@ -15,14 +17,16 @@ import (
 )
 
 type BrokerRequest struct {
-	Op   string `json:"op"`   // "QUERY", "SUBSCRIBE"
+	Op   string `json:"op"`   // "QUERY", "SUBSCRIBE", "HANDSHAKE"
 	Tool string `json:"tool"` // Tool name
 }
 
 type BrokerResponse struct {
-	Status  string `json:"status"`  // "STABLE", "UPDATE_AVAIL", "ERROR"
-	Version string `json:"version,omitempty"`
-	Message string `json:"message,omitempty"`
+	Status           string `json:"status"` // "STABLE", "UPDATE_AVAIL", "ERROR", "MANAGED", "UNMANAGED"
+	ToolID           string `json:"tool_id,omitempty"`
+	AnyislandVersion string `json:"anyisland_version,omitempty"`
+	Version          string `json:"version,omitempty"`
+	Message          string `json:"message,omitempty"`
 }
 
 type UpdateBroker struct {
@@ -76,6 +80,9 @@ func (b *UpdateBroker) handleConnection(conn net.Conn) {
 	}
 
 	switch req.Op {
+	case "HANDSHAKE":
+		resp := b.handleHandshake(conn)
+		json.NewEncoder(conn).Encode(resp)
 	case "QUERY":
 		resp := b.checkTool(req.Tool)
 		json.NewEncoder(conn).Encode(resp)
@@ -93,6 +100,55 @@ func (b *UpdateBroker) handleConnection(conn net.Conn) {
 		}
 		b.removeSubscriber(req.Tool, conn)
 	}
+}
+
+func (b *UpdateBroker) handleHandshake(conn net.Conn) BrokerResponse {
+	unixConn, ok := conn.(*net.UnixConn)
+	if !ok {
+		return BrokerResponse{Status: "ERROR", Message: "Not a unix connection"}
+	}
+
+	f, err := unixConn.File()
+	if err != nil {
+		return BrokerResponse{Status: "ERROR", Message: "Failed to get connection file"}
+	}
+	defer f.Close()
+
+	pid, err := b.getPeerPID(f)
+	if err != nil {
+		return BrokerResponse{Status: "ERROR", Message: "Failed to get peer PID"}
+	}
+
+	exePath, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
+	if err != nil {
+		// Fallback for macOS or systems without /proc
+		// This is a simplified version; a full implementation would need platform-specific logic
+		return BrokerResponse{Status: "ERROR", Message: "Failed to resolve peer executable"}
+	}
+
+	tool, err := b.reg.GetToolByPath(exePath)
+	if err != nil {
+		return BrokerResponse{Status: "ERROR", Message: err.Error()}
+	}
+
+	if tool != nil {
+		return BrokerResponse{
+			Status:           "MANAGED",
+			ToolID:           tool.Name,
+			Version:          tool.Version,
+			AnyislandVersion: Version,
+		}
+	}
+
+	return BrokerResponse{Status: "UNMANAGED"}
+}
+
+func (b *UpdateBroker) getPeerPID(f *os.File) (int, error) {
+	ucred, err := syscall.GetsockoptUcred(int(f.Fd()), syscall.SOL_SOCKET, syscall.SO_PEERCRED)
+	if err != nil {
+		return 0, err
+	}
+	return int(ucred.Pid), nil
 }
 
 func (b *UpdateBroker) checkTool(name string) BrokerResponse {
@@ -168,19 +224,28 @@ func (b *UpdateBroker) doPoll() {
 
 
 	for _, t := range tools {
-
 		if t.Name == "anyisland" {
-
 			continue
+		}
 
+		// Load manifest to check update policy
+		sourceDir := filepath.Join(b.sys.GetSourceDir(), t.Name)
+		manifestPath := filepath.Join(sourceDir, "anyisland.json")
+		m, err := LoadManifest(manifestPath)
+		if err == nil && m.Runtime != nil {
+			if m.Runtime.ManagedUpdates != nil && !*m.Runtime.ManagedUpdates {
+				fmt.Printf("[Broker] Pulse: %s has opted out of managed updates\n", t.Name)
+				continue
+			}
+			if m.Runtime.UpdateCommand != "" {
+				fmt.Printf("[Broker] Pulse: %s uses custom update command: %s\n", t.Name, m.Runtime.UpdateCommand)
+				// In a full implementation, we would trigger this command or notify subscribers
+			}
 		}
 
 		// Logic to check remote version for other tools...
-
 		fmt.Printf("[Broker] Polling for %s updates...\n", t.Name)
-
 	}
-
 }
 
 
