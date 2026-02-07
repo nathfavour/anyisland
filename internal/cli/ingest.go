@@ -88,6 +88,16 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 	repoURL = normalizeRepoURL(repoURL)
 	workDir := i.getSourcePath(repoURL, m.Name)
 
+	// Security: Prevent anyisland from being cloned into its own source dir 
+	// (e.g. if someone tries to install anyisland into anyisland)
+	if m.Name == "anyisland" {
+		exePath, _ := os.Executable()
+		absWorkDir, _ := filepath.Abs(workDir)
+		if strings.HasPrefix(exePath, absWorkDir) {
+			return "", "", fmt.Errorf("refusing to build anyisland within its own source directory (%s)", workDir)
+		}
+	}
+
 	if _, err := os.Stat(repoURL); err == nil {
 		fmt.Printf("Using local source at %s\n", workDir)
 	} else if strings.HasSuffix(repoURL, ".zip") || strings.Contains(repoURL, "/zipball/") || strings.Contains(repoURL, "/archive/") {
@@ -106,17 +116,25 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 			}
 		} else {
 			fmt.Printf("Updating %s in %s...\n", repoURL, workDir)
+			// Ensure we are on a clean state
+			_ = exec.CommandContext(ctx, "git", "-C", workDir, "reset", "--hard").Run()
+			_ = exec.CommandContext(ctx, "git", "-C", workDir, "clean", "-fd").Run()
+
 			fetchCmd := exec.CommandContext(ctx, "git", "-C", workDir, "fetch", "origin")
 			if err := fetchCmd.Run(); err != nil {
 				return "", "", fmt.Errorf("git fetch failed: %w", err)
 			}
 
-			resetCmd := exec.CommandContext(ctx, "git", "-C", workDir, "reset", "--hard", "origin/master")
+			// Detect default branch if not specified
+			branch := "master"
+			checkMain := exec.CommandContext(ctx, "git", "-C", workDir, "show-ref", "--verify", "refs/remotes/origin/main")
+			if err := checkMain.Run(); err == nil {
+				branch = "main"
+			}
+
+			resetCmd := exec.CommandContext(ctx, "git", "-C", workDir, "reset", "--hard", "origin/"+branch)
 			if err := resetCmd.Run(); err != nil {
-				resetCmd = exec.CommandContext(ctx, "git", "-C", workDir, "reset", "--hard", "origin/main")
-				if err := resetCmd.Run(); err != nil {
-					return "", "", fmt.Errorf("git reset failed: %w", err)
-				}
+				return "", "", fmt.Errorf("git reset to origin/%s failed: %w", branch, err)
 			}
 		}
 	}

@@ -139,6 +139,89 @@ func (m *LifecycleManager) Rollback() error {
 	})
 }
 
+func (m *LifecycleManager) HealTool(ctx context.Context, ag agent.Synthesizer, toolName string) error {
+	reg, err := registry.Open(m.sys.GetIslandDir())
+	if err != nil {
+		return err
+	}
+	defer reg.Close()
+
+	t, err := reg.GetTool(toolName)
+	if err != nil {
+		return err
+	}
+	if t == nil {
+		return fmt.Errorf("tool %s not found in registry", toolName)
+	}
+
+	ingestor := NewIngestor(ag, m.sys)
+	isBroken := false
+	reason := ""
+
+	// 1. Check binary existence
+	if _, err := os.Stat(t.InstallPath); os.IsNotExist(err) {
+		isBroken = true
+		reason = "binary missing"
+	} else if !ingestor.VerifyToolIntegrity(t.InstallPath, t.BinaryHash) {
+		// 2. Check integrity (hash)
+		isBroken = true
+		reason = "integrity mismatch (tampered or corrupted)"
+	}
+
+	// 3. Check source directory (if applicable)
+	sourceDir := ingestor.getSourcePath(t.Source, t.Name)
+	if t.Type == "source" {
+		if _, err := os.Stat(sourceDir); os.IsNotExist(err) {
+			isBroken = true
+			reason = "source directory missing"
+		} else if _, err := os.Stat(filepath.Join(sourceDir, ".git")); os.IsNotExist(err) {
+			// Some tools might delete .git to "clean up" but we need it for updates
+			isBroken = true
+			reason = "source directory corrupted (missing .git)"
+		}
+	}
+
+	if !isBroken {
+		return nil // Tool is healthy
+	}
+
+	fmt.Printf("🛠️ Tool '%s' is broken: %s. Healing...\n", toolName, reason)
+
+	m.LogEvent(LifecycleEvent{
+		Type:    "heal",
+		Action:  "start",
+		Status:  "processing",
+		Message: fmt.Sprintf("Healing %s due to: %s", toolName, reason),
+	})
+
+	// Re-ingest and Re-build
+	manifest, commit, err := ingestor.Ingest(ctx, t.Source)
+	if err != nil {
+		return fmt.Errorf("failed to re-ingest during heal: %w", err)
+	}
+
+	hash, installPath, err := ingestor.Build(ctx, manifest, t.Source)
+	if err != nil {
+		return fmt.Errorf("failed to re-build during heal: %w", err)
+	}
+
+	// Update registry with new health info
+	t.BinaryHash = hash
+	t.InstallPath = installPath
+	t.Version = manifest.Version
+	t.LastCommit = commit
+	if err := reg.RegisterTool(*t); err != nil {
+		return fmt.Errorf("failed to update registry after heal: %w", err)
+	}
+
+	return m.LogEvent(LifecycleEvent{
+		Type:    "heal",
+		Action:  "complete",
+		Status:  "success",
+		Message: fmt.Sprintf("Healed %s successfully", toolName),
+	})
+}
+
 func (m *LifecycleManager) HotSwap(targetPath string, extraEnv ...string) error {
 	exePath := targetPath
 	if exePath == "" {

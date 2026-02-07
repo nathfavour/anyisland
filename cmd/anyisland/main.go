@@ -302,30 +302,32 @@ import (
 			                                                                                return err
 			                                                                        }
 			                        
-			                                                                        if manifest.Name == "anyisland" {
-			                                                                                return fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
-			                                                                        }
-			                        
-			                                                                                                                                                                        reg, err := registry.Open(sys.GetIslandDir())
-			                                                                                                                                                                        if err != nil {
-			                                                                                                                                return err
-			                                                                                                                        }
-							defer reg.Close()
-			
-			                                                                        existing, _ := reg.GetTool(manifest.Name)
-			                                                                        if existing != nil {
-			                                                                                if existing.LastCommit == commit {
-			                                                                                        if ingestor.VerifyToolIntegrity(existing.InstallPath, existing.BinaryHash) {
-			                                                                                                fmt.Printf("%s is already up-to-date and healthy (commit: %s)\n", manifest.Name, cli.ShortCommit(commit))
-			                                                                                                return nil
-			                                                                                        }
-			                                                                                        fmt.Printf("%s seems broken. Reinstalling...\n", manifest.Name)
-			                                                                                } else {
-			                                                                                        fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, cli.ShortCommit(existing.LastCommit), cli.ShortCommit(commit))
-			                                                                                }
-			                                                                        }			
-			                        fmt.Println("\nProposed Build Plan:")
-			                        for _, step := range manifest.Build.Steps {
+			                                                                                                                                                                        if manifest.Name == "anyisland" {
+			                                                                                                                                                                                return fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
+			                                                                                                                                                                        }
+			                                                                                                                        
+			                                                                                                                                                                                                                                                                        reg, err := registry.Open(sys.GetIslandDir())
+			                                                                                                                                                                                                                                                                        if err != nil {
+			                                                                                                                                                                                                                                return err
+			                                                                                                                                                                                                                        }
+			                                                                                                                                defer reg.Close()
+			                                                                        
+			                                                                                                                                                                        existing, _ := reg.GetTool(manifest.Name)
+			                                                                                                                                                                        if existing != nil {
+			                                                                                                                                                                                if existing.LastCommit == commit {
+			                                                                                                                                                                                        lm := cli.NewLifecycleManager(sys)
+			                                                                                                                                                                                        if err := lm.HealTool(cmd.Context(), ag, manifest.Name); err == nil {
+			                                                                                                                                                                                                fmt.Printf("%s is already up-to-date and healthy (commit: %s)\n", manifest.Name, cli.ShortCommit(commit))
+			                                                                                                                                                                                                return nil
+			                                                                                                                                                                                        } else {
+			                                                                                                                                                                                                fmt.Printf("Attempting full re-installation of %s...\n", manifest.Name)
+			                                                                                                                                                                                        }
+			                                                                                                                                                                                } else {
+			                                                                                                                                                                                                                                                                                                                                                                                                        fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, cli.ShortCommit(existing.LastCommit), cli.ShortCommit(commit))
+			                                                                                                                                                                                                                                                                                                                                                                                                }
+			                                                                                                                                                                                                                                                                                                                                                                                        }
+			                                                                                                                                                                                                                                                                                                                                        fmt.Println("\nProposed Build Plan:")
+			                                                                                                                                                                                                                                        for _, step := range manifest.Build.Steps {
 			                                fmt.Printf("  - %s\n", step)
 			                        }
 			
@@ -686,30 +688,32 @@ import (
 			                                                                                return err
 			                                                                        }
 			                        
-			                                                                        if manifest.Name == "anyisland" {
-			                                                                                return fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
-			                                                                        }
-			                        
-			                                                                                                                                                                        reg, err := registry.Open(sys.GetIslandDir())
-			                                                                                                                                                                        if err != nil {
-			                                                                                                                                return err
-			                                                                                                                        }
-							defer reg.Close()
-			
-			                                                                        existing, _ := reg.GetTool(manifest.Name)
-			                                                                        if existing != nil {
-			                                                                                if existing.LastCommit == commit {
-			                                                                                        if ingestor.VerifyToolIntegrity(existing.InstallPath, existing.BinaryHash) {
-			                                                                                                fmt.Printf("%s is already up-to-date and healthy (commit: %s)\n", manifest.Name, cli.ShortCommit(commit))
-			                                                                                                return nil
-			                                                                                        }
-			                                                                                        fmt.Printf("%s seems broken. Reinstalling...\n", manifest.Name)
-			                                                                                } else {
-			                                                                                        fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, cli.ShortCommit(existing.LastCommit), cli.ShortCommit(commit))
-			                                                                                }
-			                                                                        }			
-			                        fmt.Println("\nProposed Build Plan:")
-			                        for _, step := range manifest.Build.Steps {
+			                                                                                                                                                                        if manifest.Name == "anyisland" {
+			                                                                                                                                                                                return fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
+			                                                                                                                                                                        }
+			                                                                                                                        
+			                                                                                                                                                                                                                                                                        reg, err := registry.Open(sys.GetIslandDir())
+			                                                                                                                                                                                                                                                                        if err != nil {
+			                                                                                                                                                                                                                                return err
+			                                                                                                                                                                                                                        }
+			                                                                                                                                defer reg.Close()
+			                                                                        
+			                                                                                                                                                                        existing, _ := reg.GetTool(manifest.Name)
+			                                                                                                                                                                        if existing != nil {
+			                                                                                                                                                                                if existing.LastCommit == commit {
+			                                                                                                                                                                                        lm := cli.NewLifecycleManager(sys)
+			                                                                                                                                                                                        if err := lm.HealTool(cmd.Context(), ag, manifest.Name); err == nil {
+			                                                                                                                                                                                                fmt.Printf("%s is already up-to-date and healthy (commit: %s)\n", manifest.Name, cli.ShortCommit(commit))
+			                                                                                                                                                                                                return nil
+			                                                                                                                                                                                        } else {
+			                                                                                                                                                                                                fmt.Printf("Attempting full re-installation of %s...\n", manifest.Name)
+			                                                                                                                                                                                        }
+			                                                                                                                                                                                } else {
+			                                                                                                                                                                                        fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, cli.ShortCommit(existing.LastCommit), cli.ShortCommit(commit))
+			                                                                                                                                                                                }
+			                                                                                                                                                                        }
+                                                                                                                                                fmt.Println("\nProposed Build Plan:")
+                                                for _, step := range manifest.Build.Steps {
 			                                fmt.Printf("  - %s\n", step)
 			                        }
 			
@@ -1328,15 +1332,16 @@ import (
 	                                                                        }
 	                                                                                                                fmt.Printf("Checking %s for updates...\n", t.Name)
 	                                                                                                                
-	                                                                                                                                                                                                                                        latestCommit, _ := ingestor.DiscoverLatestCommit(cmd.Context(), source)
-	                                                                                                                                                                                                                                        if latestCommit != "" && t.LastCommit == latestCommit {
-	                                                                                                                                                                                                                                                if ingestor.VerifyToolIntegrity(t.InstallPath, t.BinaryHash) {
-	                                                                                                                                                                                                                                                        fmt.Printf("%s is already up-to-date (%s)\n", t.Name, cli.ShortCommit(latestCommit))
-	                                                                                                                                                                                                                                                        continue
-	                                                                                                                                                                                                                                                }
-	                                                                                                                                                                                                                                                fmt.Printf("%s seems broken. Reinstalling...\n", t.Name)
-	                                                                                                                                                                                                                                        }
-	                                                                                                                                                                                                
+	                                                                                                                                                                                                                                                                                                                                                                latestCommit, _ := ingestor.DiscoverLatestCommit(cmd.Context(), source)
+	                                                                                                                                                                                                                                                                                                                                                                if latestCommit != "" && t.LastCommit == latestCommit {
+	                                                                                                                                                                                                                                                                                                                                                                        lm := cli.NewLifecycleManager(sys)
+	                                                                                                                                                                                                                                                                                                                                                                        if err := lm.HealTool(cmd.Context(), ag, t.Name); err == nil {
+	                                                                                                                                                                                                                                                                                                                                                                                fmt.Printf("%s is already up-to-date and healthy (%s)\n", t.Name, cli.ShortCommit(latestCommit))
+	                                                                                                                                                                                                                                                                                                                                                                                continue
+	                                                                                                                                                                                                                                                                                                                                                                        } else {
+	                                                                                                                                                                                                                                                                                                                                                                                fmt.Printf("Attempting full re-installation of %s...\n", t.Name)
+	                                                                                                                                                                                                                                                                                                                                                                        }
+	                                                                                                                                                                                                                                                                                                                                                                }	                                                                                                                                                                                                
 	                                                                                                                                                                                                                                        manifest, commit, err := ingestor.Ingest(cmd.Context(), source)
 	                                                                                                                                                                                                                                        
 	                                                                                                                                                                                                                                        if err != nil {
