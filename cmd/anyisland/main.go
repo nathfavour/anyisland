@@ -297,13 +297,16 @@ import (
 			                        ag := getSynthesizer()
 			                        ingestor := cli.NewIngestor(ag, sys)
 			
-			                        manifest, commit, err := ingestor.Ingest(cmd.Context(), url)
-			                        if err != nil {
-			                                return err
-			                        }
-			
-			                        reg, err := registry.Open(sys.GetIslandDir())
-			                        if err != nil {
+			                                                                        manifest, commit, err := ingestor.Ingest(cmd.Context(), url)
+			                                                                        if err != nil {
+			                                                                                return err
+			                                                                        }
+			                        
+			                                                                        if manifest.Name == "anyisland" {
+			                                                                                return fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
+			                                                                        }
+			                        
+			                                                                        reg, err := registry.Open(sys.GetIslandDir())			                        if err != nil {
 			                                return err
 			                        }
 			                        defer reg.Close()
@@ -677,13 +680,16 @@ import (
 			                        ag := getSynthesizer()
 			                        ingestor := cli.NewIngestor(ag, sys)
 			
-			                        manifest, commit, err := ingestor.Ingest(cmd.Context(), url)
-			                        if err != nil {
-			                                return err
-			                        }
-			
-			                        reg, err := registry.Open(sys.GetIslandDir())
-			                        if err != nil {
+			                                                                        manifest, commit, err := ingestor.Ingest(cmd.Context(), url)
+			                                                                        if err != nil {
+			                                                                                return err
+			                                                                        }
+			                        
+			                                                                        if manifest.Name == "anyisland" {
+			                                                                                return fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
+			                                                                        }
+			                        
+			                                                                        reg, err := registry.Open(sys.GetIslandDir())			                        if err != nil {
 			                                return err
 			                        }
 			                        defer reg.Close()
