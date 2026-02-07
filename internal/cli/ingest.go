@@ -156,10 +156,24 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 			continue
 		}
 		fmt.Printf("Executing: %s\n", step)
-		args := strings.Fields(step)
+		fullArgs := strings.Fields(step)
+		if len(fullArgs) == 0 {
+			continue
+		}
+
+		var env []string
+		args := fullArgs
+		for len(args) > 0 && strings.Contains(args[0], "=") && !strings.HasPrefix(args[0], "-") {
+			env = append(env, args[0])
+			args = args[1:]
+		}
+
+		if len(args) == 0 {
+			continue
+		}
 
 		// Inject ldflags for Anyisland core components
-		if (m.Name == "anyisland") && args[0] == "go" && (args[1] == "build" || args[1] == "install") {
+		if (m.Name == "anyisland") && args[0] == "go" && len(args) > 1 && (args[1] == "build" || args[1] == "install") {
 			commit, _ := i.DiscoverLatestCommit(ctx, repoURL)
 			if commit == "" {
 				commit = "unknown"
@@ -175,6 +189,9 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 
 		buildCmd := exec.CommandContext(ctx, args[0], args[1:]...)
 		buildCmd.Dir = workDir
+		if len(env) > 0 {
+			buildCmd.Env = append(os.Environ(), env...)
+		}
 
 		var combinedOutput strings.Builder
 		buildCmd.Stdout = io.MultiWriter(os.Stdout, &combinedOutput)

@@ -47,7 +47,7 @@ anyisland list
 ## Architecture
 - **PAL (Platform Abstraction Layer):** Unified interface for Linux, macOS, and Windows.
 - **Registry:** SQLite database (`~/.anyisland/island.db`) tracking all tools.
-- **Daemon:** Background UDP server on port 1995 for tool discovery.
+- **Daemon:** Background UDP server (:1995) for discovery and Unix Socket (`anyisland.sock`) for the Pulse Handshake.
 - **Agent:** AI Synthesizer that generates build plans from source code analysis.
 
 ## Development
