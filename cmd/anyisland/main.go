@@ -306,10 +306,11 @@ import (
 			                                                                                return fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
 			                                                                        }
 			                        
-			                                                                        reg, err := registry.Open(sys.GetIslandDir())			                        if err != nil {
-			                                return err
-			                        }
-			                        defer reg.Close()
+			                                                                                                                                                                        reg, err := registry.Open(sys.GetIslandDir())
+			                                                                                                                                                                        if err != nil {
+			                                                                                                                                return err
+			                                                                                                                        }
+							defer reg.Close()
 			
 			                                                                        existing, _ := reg.GetTool(manifest.Name)
 			                                                                        if existing != nil {
@@ -689,10 +690,11 @@ import (
 			                                                                                return fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
 			                                                                        }
 			                        
-			                                                                        reg, err := registry.Open(sys.GetIslandDir())			                        if err != nil {
-			                                return err
-			                        }
-			                        defer reg.Close()
+			                                                                                                                                                                        reg, err := registry.Open(sys.GetIslandDir())
+			                                                                                                                                                                        if err != nil {
+			                                                                                                                                return err
+			                                                                                                                        }
+							defer reg.Close()
 			
 			                                                                        existing, _ := reg.GetTool(manifest.Name)
 			                                                                        if existing != nil {
@@ -797,11 +799,11 @@ import (
 	        
 	                                        if len(args) > 0 {
 	                                                toolName := args[0]
-	                                                reg, err := registry.Open(sys.GetIslandDir())
-	                                                if err != nil {
-	                                                        return err
-	                                                }
-	                                                defer reg.Close()
+	                                                                                                                                                reg, err := registry.Open(sys.GetIslandDir())
+	                                                                                                                                                if err != nil {
+	                                                                                                        return err
+	                                                                                                }
+							defer reg.Close()
 	        
 	                                                tool, err := reg.GetTool(toolName)
 	                                                if err != nil {
@@ -914,11 +916,11 @@ import (
 	                                                                                }
 	                                                                        }()
 	                                        
-	                                                                        reg, err := registry.Open(sys.GetIslandDir())
-	                                                                        if err != nil {
-	                                                                                return err
-	                                                                        }
-	                                                                        defer reg.Close()
+	                                                                                                                                                                        reg, err := registry.Open(sys.GetIslandDir())
+	                                                                                                                                                                        if err != nil {
+	                                                                                                                                return err
+	                                                                                                                        }
+							defer reg.Close()
 	                                        
 	                                                                                                        broker := cli.NewUpdateBroker(sys, reg)
 	                                        
