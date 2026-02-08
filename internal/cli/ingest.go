@@ -247,8 +247,10 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 	} else {
 		targetDir = i.sys.GetIslandBinDir()
 		if plan.Bin == "anyisland" {
-		                        targetDir = i.sys.GetBinDir()
-		                }	}
+			targetDir = i.sys.GetBinDir()
+		}
+	}
+	targetDir = i.expandPath(targetDir)
 
 	if plan.Toolchain == "flutter" {
 		appDir := filepath.Join(targetDir, m.Name+"-app")
@@ -453,109 +455,40 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		}
 	}
 
-		// AI Discretion Check
-
-		discretion, err := i.agent.AnalyzeDiscretion(ctx, files, readmeContent)
-
-		if err == nil && discretion != nil && !discretion.Allowed {
-
-			return nil, commit, fmt.Errorf("repository is not a buildable tool: %s", discretion.Reason)
-
-		}
-
-	
-
-		manifest := &Manifest{
-
-			Name:    repo,
-
-			Version: "latest",
-
-		}
-
-	
-
-		isGo := false
-
-		for _, f := range files {
-
-			if f == "go.mod" {
-
-				isGo = true
-
-				break
-
-			}
-
-		}
-
-		if isGo {
-
-			manifest.Build = agent.BuildPlan{
-
-				Toolchain: "go",
-
-				Steps:     []string{"go build -v -o " + repo},
-
-				Bin:       repo,
-
-			}
-
-		} else {
-
-			isRust := false
-
-			for _, f := range files {
-
-				if f == "Cargo.toml" {
-
-					isRust = true
-
-					break
-
-				}
-
-			}
-
-			if isRust {
-
-				manifest.Build = agent.BuildPlan{
-
-					Toolchain: "rust",
-
-					Steps:     []string{"cargo build --release"},
-
-					Bin:       "target/release/" + repo,
-
-				}
-
-			} else {
-
-				plan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
-
-				if err != nil {
-
-					fallback := &agent.HeuristicSynthesizer{}
-
-					plan, _ = fallback.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
-
-				}
-
-				manifest.Build = *plan
-
-			}
-
-		}
-
-	
-
-		// Self-Conflict Prevention: If the tool identifies as anyisland, 
-		// we must ensure it doesn't overwrite the manager via a generic install.
-
-		return manifest, commit, nil
+	// AI Discretion Check
+	discretion, err := i.agent.AnalyzeDiscretion(ctx, files, readmeContent)
+	if err == nil && discretion != nil && !discretion.Allowed {
+		return nil, commit, fmt.Errorf("repository is not a buildable tool: %s", discretion.Reason)
 	}
 
+	manifest := &Manifest{
+		Name:    repo,
+		Version: "latest",
+	}
+
+	isGo := false
+	for _, f := range files {
+		if f == "go.mod" {
+			isGo = true
+			break
+		}
+	}
+
+	if isGo {
+		manifest.Build = agent.BuildPlan{
+			Toolchain: "go",
+			Steps:     []string{"go build -v -o " + repo},
+			Bin:       repo,
+		}
+	}
+
+	// Self-Conflict Prevention: If the tool identifies as anyisland, 
+	// we must ensure it doesn't overwrite the manager via a generic install.
+	return manifest, commit, nil
+}
+
 func normalizeRepoURL(url string) string {
+	url = expandPath(url)
 	if !strings.HasPrefix(url, "http") && !strings.HasPrefix(url, "git@") {
 		if _, err := os.Stat(url); err == nil {
 			abs, _ := filepath.Abs(url)
@@ -567,4 +500,20 @@ func normalizeRepoURL(url string) string {
 		return "https://" + url
 	}
 	return url
+}
+
+func (i *Ingestor) expandPath(path string) string {
+	return expandPath(path)
+}
+
+func expandPath(path string) string {
+	if strings.HasPrefix(path, "~/") {
+		home, _ := os.UserHomeDir()
+		return filepath.Join(home, path[2:])
+	}
+	if path == "~" {
+		home, _ := os.UserHomeDir()
+		return home
+	}
+	return path
 }
