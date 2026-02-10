@@ -3,6 +3,7 @@ package crypto
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -10,11 +11,15 @@ import (
 )
 
 type CryptoManager struct {
-	sys pal.System
+	sys   pal.System
+	stdin io.Reader
 }
 
 func NewManager(sys pal.System) *CryptoManager {
-	return &CryptoManager{sys: sys}
+	return &CryptoManager{
+		sys:   sys,
+		stdin: os.Stdin,
+	}
 }
 
 func (c *CryptoManager) GetEncryptionKey() (string, error) {
@@ -29,7 +34,7 @@ func (c *CryptoManager) GetEncryptionKey() (string, error) {
 	// 2. Fallback: Ask user for passphrase
 	fmt.Println("Platform keyring unavailable or empty.")
 	fmt.Print("Enter master passphrase for Anyisland: ")
-	reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewReader(c.stdin)
 	passphrase, err := reader.ReadString('\n')
 	if err != nil {
 		return "", err
