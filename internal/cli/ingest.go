@@ -464,6 +464,8 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		if err == nil && discovered != "" && discovered != "NONE" {
 			fmt.Printf("Found: %s\n", discovered)
 			repoURL = normalizeRepoURL(discovered)
+		} else {
+			fmt.Printf("Discovery failed or returned NONE for %s: %v\n", originalURL, err)
 		}
 	}
 
