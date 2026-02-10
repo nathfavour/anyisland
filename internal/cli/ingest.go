@@ -566,18 +566,29 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 	}
 
 	isGo := false
+	isAnyisland := false
 	for _, f := range files {
 		if f == "go.mod" {
 			isGo = true
-			break
+		}
+		if f == "cmd/anyisland/main.go" {
+			isAnyisland = true
 		}
 	}
 
 	if isGo {
-		manifest.Build = agent.BuildPlan{
-			Toolchain: "go",
-			Steps:     []string{"go build -v -o " + repo},
-			Bin:       repo,
+		if isAnyisland {
+			manifest.Build = agent.BuildPlan{
+				Toolchain: "go",
+				Steps:     []string{"go build -v -o anyisland ./cmd/anyisland"},
+				Bin:       "anyisland",
+			}
+		} else {
+			manifest.Build = agent.BuildPlan{
+				Toolchain: "go",
+				Steps:     []string{"go build -v -o " + repo},
+				Bin:       repo,
+			}
 		}
 	}
 
