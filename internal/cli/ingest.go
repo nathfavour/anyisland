@@ -578,12 +578,12 @@ func normalizeRepoURL(url string) string {
 			return abs
 		}
 		
-		// Check if it's an official package
-		// We assume we are running from somewhere that can find the core repo's official packages
-		// Or we might need a better way to locate them.
-		// For now, let's look for them in a relative path if we're in the source tree, 
-		// but that's not robust for installed binary.
-		
+		// If it's a simple name (no dots, no slashes), don't prefix with https:// yet
+		// because Ingest will try to discover it.
+		if !strings.Contains(url, ".") && !strings.Contains(url, "/") {
+			return url
+		}
+
 		if strings.Count(url, "/") == 1 {
 			return "https://github.com/" + url
 		}
