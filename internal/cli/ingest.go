@@ -99,11 +99,13 @@ func (i *Ingestor) ResolveDependencies(ctx context.Context, rootSource string) (
 
 	var resolve func(source string) error
 	resolve = func(source string) error {
+		fmt.Printf("Resolving: %s\n", source)
 		m, commit, finalURL, err := i.Ingest(ctx, source)
 		if err != nil {
 			return fmt.Errorf("failed to ingest %s: %w", source, err)
 		}
 		
+		fmt.Printf("Ingested %s as %s\n", source, m.Name)
 		if _, ok := manifests[m.Name]; ok {
 			return nil
 		}
@@ -568,10 +570,18 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 func normalizeRepoURL(url string) string {
 	url = expandPath(url)
 	if !strings.HasPrefix(url, "http") && !strings.HasPrefix(url, "git@") {
+		// Check if it's a local path
 		if _, err := os.Stat(url); err == nil {
 			abs, _ := filepath.Abs(url)
 			return abs
 		}
+		
+		// Check if it's an official package
+		// We assume we are running from somewhere that can find the core repo's official packages
+		// Or we might need a better way to locate them.
+		// For now, let's look for them in a relative path if we're in the source tree, 
+		// but that's not robust for installed binary.
+		
 		if strings.Count(url, "/") == 1 {
 			return "https://github.com/" + url
 		}
