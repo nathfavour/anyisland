@@ -63,6 +63,7 @@ func (i *Ingestor) DiscoverLatestCommit(ctx context.Context, repoURL string) (st
 }
 
 func (i *Ingestor) getSourcePath(repoURL string, pkgName string) string {
+	repoURL = normalizeRepoURL(repoURL)
 	if _, err := os.Stat(repoURL); err == nil {
 		abs, _ := filepath.Abs(repoURL)
 		return abs
