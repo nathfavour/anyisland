@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/nathfavour/anyisland/internal/pal"
 	"github.com/nathfavour/anyisland/internal/registry"
 )
@@ -41,7 +42,7 @@ type MainModel struct {
 func NewMainModel(sys pal.System, reg *registry.Registry) MainModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = highlight
+	s.Style = lipgloss.NewStyle().Foreground(highlight)
 
 	tabs := []string{"Tools", "Visuals", "Pulse", "Help"}
 
@@ -81,7 +82,7 @@ func (m MainModel) loadTools() tea.Msg {
 	for i, t := range tools {
 		items[i] = toolItem{
 			name:    t.Name,
-			desc:    t.URL, // Placeholder for description if not in tool struct
+			desc:    t.Source, // Use Source as placeholder for desc
 			version: t.Version,
 		}
 	}
