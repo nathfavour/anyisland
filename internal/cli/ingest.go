@@ -99,13 +99,11 @@ func (i *Ingestor) ResolveDependencies(ctx context.Context, rootSource string) (
 
 	var resolve func(source string) error
 	resolve = func(source string) error {
-		fmt.Printf("Resolving: %s\n", source)
 		m, commit, finalURL, err := i.Ingest(ctx, source)
 		if err != nil {
 			return fmt.Errorf("failed to ingest %s: %w", source, err)
 		}
 		
-		fmt.Printf("Ingested %s as %s\n", source, m.Name)
 		if _, ok := manifests[m.Name]; ok {
 			return nil
 		}
@@ -459,13 +457,21 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 
 	// If it's a simple name, try to discover it
 	if !strings.Contains(originalURL, "/") && !strings.Contains(originalURL, ".") && !strings.Contains(originalURL, ":") {
-		fmt.Printf("Searching for tool: %s...\n", originalURL)
-		discovered, err := i.agent.DiscoverTool(ctx, originalURL)
-		if err == nil && discovered != "" && discovered != "NONE" {
-			fmt.Printf("Found: %s\n", discovered)
-			repoURL = normalizeRepoURL(discovered)
+		// 1. Check if it's an official package in the current source tree
+		// (This is mostly for development/testing)
+		officialPath := filepath.Join("packages", "official", originalURL, "anyisland.json")
+		if _, err := os.Stat(officialPath); err == nil {
+			repoURL, _ = filepath.Abs(filepath.Dir(officialPath))
+			fmt.Printf("Using official package manifest: %s\n", officialPath)
 		} else {
-			fmt.Printf("Discovery failed or returned NONE for %s: %v\n", originalURL, err)
+			fmt.Printf("Searching for tool: %s...\n", originalURL)
+			discovered, err := i.agent.DiscoverTool(ctx, originalURL)
+			if err == nil && discovered != "" && discovered != "NONE" {
+				fmt.Printf("Found: %s\n", discovered)
+				repoURL = normalizeRepoURL(discovered)
+			} else {
+				fmt.Printf("Discovery failed or returned NONE for %s: %v\n", originalURL, err)
+			}
 		}
 	}
 
