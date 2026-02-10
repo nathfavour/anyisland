@@ -3,10 +3,12 @@ package tui
 import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/nathfavour/anyisland/internal/pal"
 	"github.com/nathfavour/anyisland/internal/registry"
+	"github.com/nathfavour/anyisland/internal/visual"
 )
 
 type sessionState int
@@ -16,6 +18,7 @@ const (
 	visualsView
 	pulseView
 	helpView
+	commandMode
 )
 
 type toolItem struct {
@@ -27,22 +30,37 @@ func (i toolItem) Description() string { return i.desc + " (" + i.version + ")" 
 func (i toolItem) FilterValue() string { return i.name }
 
 type MainModel struct {
-	state    sessionState
-	sys      pal.System
-	reg      *registry.Registry
-	list     list.Model
-	spinner  spinner.Model
-	width    int
-	height   int
-	loading  bool
-	err      error
-	tabs     []string
+	state             sessionState
+	prevState         sessionState
+	sys               pal.System
+	reg               *registry.Registry
+	list              list.Model
+	spinner           spinner.Model
+	textInput         textinput.Model
+	width             int
+	height            int
+	loading           bool
+	err               error
+	tabs              []string
+	recording         *visual.RecordingSession
+	lastStatus        string
+	suggestions       []string
+	selectedSuggest   int
 }
+
+var allCommands = []string{"quit", "q", "shot", "record", "help"}
+
 
 func NewMainModel(sys pal.System, reg *registry.Registry) MainModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(highlight)
+
+	ti := textinput.New()
+	ti.Placeholder = "Enter command..."
+	ti.CharLimit = 156
+	ti.Width = 20
+	ti.Prompt = "/ "
 
 	tabs := []string{"Tools", "Visuals", "Pulse", "Help"}
 
@@ -52,13 +70,14 @@ func NewMainModel(sys pal.System, reg *registry.Registry) MainModel {
 	l.Styles.Title = titleStyle
 
 	return MainModel{
-		state:   toolsView,
-		sys:     sys,
-		reg:     reg,
-		spinner: s,
-		list:    l,
-		tabs:    tabs,
-		loading: true,
+		state:     toolsView,
+		sys:       sys,
+		reg:       reg,
+		spinner:   s,
+		list:      l,
+		textInput: ti,
+		tabs:      tabs,
+		loading:   true,
 	}
 }
 

@@ -35,7 +35,12 @@ func (m MainModel) View() string {
 
 	// Content
 	var content string
-	switch m.state {
+	currentState := m.state
+	if currentState == commandMode {
+		currentState = m.prevState
+	}
+
+	switch currentState {
 	case toolsView:
 		content = m.list.View()
 	case visualsView:
@@ -46,17 +51,33 @@ func (m MainModel) View() string {
 		content = "\n  Help & Instructions\n\n" +
 			"  tab / shift+tab: Cycle tabs\n" +
 			"  up / down: Navigate list\n" +
-			"  /: Filter tools\n" +
+			"  / (in list): Filter tools\n" +
+			"  / (anywhere): Enter slash command mode\n\n" +
+			"  Commands:\n" +
+			"  /quit / /q - Exit Anyisland\n" +
+			"  /shot      - Take PNG screenshot\n" +
+			"  /record    - Start/Stop recording\n" +
+			"  /help      - Show this view\n" +
 			"  q: Quit"
 	}
 
-	body := windowStyle.Width(m.width - 2).Height(m.height - 6).Render(content)
+	bodyHeight := m.height - 7
+	if m.state == commandMode {
+		bodyHeight--
+	}
+
+	body := windowStyle.Width(m.width - 2).Height(bodyHeight).Render(content)
 	doc.WriteString(body)
 
-	// Status bar
-	status := m.renderStatusBar()
-	doc.WriteString("\n")
-	doc.WriteString(status)
+	// Command Line / Status Bar
+	if m.state == commandMode {
+		doc.WriteString("\n")
+		doc.WriteString(m.textInput.View())
+	} else {
+		status := m.renderStatusBar()
+		doc.WriteString("\n")
+		doc.WriteString(status)
+	}
 
 	return docStyle.Render(doc.String())
 }
@@ -66,10 +87,18 @@ func (m MainModel) renderStatusBar() string {
 
 	nfo := statusNFO.Render("ANYISLAND")
 	key := statusKey.Render("TAB to switch")
+
+	msg := " Managing your local tool ecosystem"
+	if m.lastStatus != "" {
+		msg = m.lastStatus
+	}
+	if m.recording != nil {
+		msg = fmt.Sprintf("🔴 RECORDING (%d frames)", len(m.recording.Frames))
+	}
 	
 	status := statusText.
 		Width(m.width - w(nfo) - w(key) - 4).
-		Render(" Managing your local tool ecosystem")
+		Render(msg)
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, nfo, status, key)
 }
