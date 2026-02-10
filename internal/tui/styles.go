@@ -57,4 +57,13 @@ var (
 			Background(lipgloss.Color("#FF5F56")).
 			Padding(0, 1).
 			MarginLeft(1)
+
+	suggestStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFDF5")).
+			Background(lipgloss.Color("#353533")).
+			Padding(0, 1)
+
+	suggestActiveStyle = suggestStyle.
+				Background(lipgloss.Color("#7D56F4")).
+				Bold(true)
 )

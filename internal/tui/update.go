@@ -26,16 +26,40 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.state == commandMode {
 			switch msg.String() {
 			case "enter":
-				cmdInput := m.textInput.Value()
+				var cmdInput string
+				if len(m.suggestions) > 0 && m.selectedSuggest >= 0 {
+					cmdInput = m.suggestions[m.selectedSuggest]
+				} else {
+					cmdInput = m.textInput.Value()
+				}
 				m.textInput.SetValue("")
+				m.suggestions = nil
 				m.state = m.prevState
 				return m.handleCommand(cmdInput)
+			case "up":
+				if len(m.suggestions) > 0 {
+					m.selectedSuggest--
+					if m.selectedSuggest < 0 {
+						m.selectedSuggest = len(m.suggestions) - 1
+					}
+				}
+				return m, nil
+			case "down", "tab":
+				if len(m.suggestions) > 0 {
+					m.selectedSuggest++
+					if m.selectedSuggest >= len(m.suggestions) {
+						m.selectedSuggest = 0
+					}
+				}
+				return m, nil
 			case "esc":
 				m.textInput.SetValue("")
+				m.suggestions = nil
 				m.state = m.prevState
 				return m, nil
 			}
 			m.textInput, cmd = m.textInput.Update(msg)
+			m.updateSuggestions()
 			return m, cmd
 		}
 
@@ -46,6 +70,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.prevState = m.state
 			m.state = commandMode
 			m.textInput.Focus()
+			m.textInput.SetValue("")
+			m.updateSuggestions()
 			return m, nil
 		case key.Matches(msg, key.NewBinding(key.WithKeys("tab"))):
 			if m.state != commandMode {
@@ -156,6 +182,28 @@ func (m MainModel) processRecording(rec *visual.RecordingSession) tea.Cmd {
 			return errMsg(err)
 		}
 		return statusMsg(fmt.Sprintf("Recording saved to %s", path))
+	}
+}
+
+func (m *MainModel) updateSuggestions() {
+	input := strings.ToLower(m.textInput.Value())
+	if input == "" {
+		m.suggestions = allCommands
+	} else {
+		var filtered []string
+		for _, c := range allCommands {
+			if strings.HasPrefix(c, input) {
+				filtered = append(filtered, c)
+			}
+		}
+		m.suggestions = filtered
+	}
+
+	if m.selectedSuggest >= len(m.suggestions) {
+		m.selectedSuggest = 0
+	}
+	if len(m.suggestions) > 0 && m.selectedSuggest < 0 {
+		m.selectedSuggest = 0
 	}
 }
 
