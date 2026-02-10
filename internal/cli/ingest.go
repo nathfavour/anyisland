@@ -18,6 +18,7 @@ import (
 
 	"github.com/google/go-github/v60/github"
 	"github.com/nathfavour/anyisland/internal/agent"
+	"github.com/nathfavour/anyisland/internal/deps"
 	"github.com/nathfavour/anyisland/internal/pal"
 )
 
@@ -82,6 +83,70 @@ func (i *Ingestor) getSourcePath(repoURL string, pkgName string) string {
 	}
 
 	return filepath.Join(i.sys.GetSourceDir(), pkgName)
+}
+
+type ResolvedPackage struct {
+	Manifest *Manifest
+	Source   string
+	Commit   string
+}
+
+func (i *Ingestor) ResolveDependencies(ctx context.Context, rootSource string) ([]ResolvedPackage, error) {
+	graph := deps.NewGraph()
+	manifests := make(map[string]*Manifest)
+	sources := make(map[string]string)
+	commits := make(map[string]string)
+
+	var resolve func(source string) error
+	resolve = func(source string) error {
+		m, commit, finalURL, err := i.Ingest(ctx, source)
+		if err != nil {
+			return fmt.Errorf("failed to ingest %s: %w", source, err)
+		}
+		
+		if _, ok := manifests[m.Name]; ok {
+			return nil
+		}
+
+		manifests[m.Name] = m
+		sources[m.Name] = finalURL
+		commits[m.Name] = commit
+
+		for _, dep := range m.Dependencies {
+			graph.AddDependency(m.Name, dep)
+			if err := resolve(dep); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	if err := resolve(rootSource); err != nil {
+		return nil, err
+	}
+
+	rootM, _, _, _ := i.Ingest(ctx, rootSource)
+	
+	resolvedNames, err := graph.Resolve(rootM.Name, func(name string) ([]string, error) {
+		if m, ok := manifests[name]; ok {
+			return m.Dependencies, nil
+		}
+		return nil, fmt.Errorf("manifest not found for %s", name)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []ResolvedPackage
+	for _, name := range resolvedNames {
+		result = append(result, ResolvedPackage{
+			Manifest: manifests[name],
+			Source:   sources[name],
+			Commit:   commits[name],
+		})
+	}
+
+	return result, nil
 }
 
 func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (string, string, error) {
@@ -386,21 +451,33 @@ func (i *Ingestor) downloadAndUnzip(ctx context.Context, url, dest string) error
 	return nil
 }
 
-func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, string, error) {
+func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, string, string, error) {
+	originalURL := repoURL
 	repoURL = normalizeRepoURL(repoURL)
+
+	// If it's a simple name, try to discover it
+	if !strings.Contains(originalURL, "/") && !strings.Contains(originalURL, ".") && !strings.Contains(originalURL, ":") {
+		fmt.Printf("Searching for tool: %s...\n", originalURL)
+		discovered, err := i.agent.DiscoverTool(ctx, originalURL)
+		if err == nil && discovered != "" && discovered != "NONE" {
+			fmt.Printf("Found: %s\n", discovered)
+			repoURL = normalizeRepoURL(discovered)
+		}
+	}
+
 	commit, _ := i.DiscoverLatestCommit(ctx, repoURL)
+	finalURL := repoURL
 
 	var owner, repo string
 	var files []string
 	var readmeContent string
 
 	if _, err := os.Stat(repoURL); err == nil {
-		absPath, _ := filepath.Abs(repoURL)
 		manifestPath := filepath.Join(absPath, "anyisland.json")
 		if _, err := os.Stat(manifestPath); err == nil {
 			m, err := LoadManifest(manifestPath)
 			if err == nil {
-				return m, commit, nil
+				return m, commit, finalURL, nil
 			}
 		}
 
@@ -437,7 +514,7 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		if err == nil {
 			var m Manifest
 			if err := json.Unmarshal(output, &m); err == nil {
-				return &m, commit, nil
+				return &m, commit, finalURL, nil
 			}
 		}
 
@@ -484,7 +561,7 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 
 	// Self-Conflict Prevention: If the tool identifies as anyisland, 
 	// we must ensure it doesn't overwrite the manager via a generic install.
-	return manifest, commit, nil
+	return manifest, commit, finalURL, nil
 }
 
 func normalizeRepoURL(url string) string {

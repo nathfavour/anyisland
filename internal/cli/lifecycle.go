@@ -195,7 +195,7 @@ func (m *LifecycleManager) HealTool(ctx context.Context, ag agent.Synthesizer, t
 	})
 
 	// Re-ingest and Re-build
-	manifest, commit, err := ingestor.Ingest(ctx, t.Source)
+	manifest, commit, _, err := ingestor.Ingest(ctx, t.Source)
 	if err != nil {
 		return fmt.Errorf("failed to re-ingest during heal: %w", err)
 	}
@@ -290,7 +290,7 @@ func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Sy
 
 	// 3. Silent update
 	ingestor := NewIngestor(ag, m.sys)
-	manifest, _, err := ingestor.Ingest(ctx, "https://github.com/nathfavour/anyisland")
+	manifest, _, _, err := ingestor.Ingest(ctx, "https://github.com/nathfavour/anyisland")
 	if err != nil {
 		fmt.Printf("⚠️ Auto-update ingestion failed: %v\n", err)
 		return

@@ -9,14 +9,15 @@ import (
 )
 
 type Tool struct {
-	ID          int
-	Name        string
-	Source      string
-	Version     string
-	LastCommit  string
-	BinaryHash  string
-	InstallPath string
-	Type        string
+	ID           int
+	Name         string
+	Source       string
+	Version      string
+	LastCommit   string
+	BinaryHash   string
+	InstallPath  string
+	Type         string
+	Dependencies []string
 }
 
 type Registry struct {
@@ -58,6 +59,12 @@ func initSchema(db *sql.DB) error {
 			tool_id INTEGER PRIMARY KEY,
 			description TEXT,
 			vector BLOB,
+			FOREIGN KEY(tool_id) REFERENCES tools(id) ON DELETE CASCADE
+		);`,
+		`CREATE TABLE IF NOT EXISTS tool_dependencies (
+			tool_id INTEGER,
+			dependency_name TEXT,
+			PRIMARY KEY(tool_id, dependency_name),
 			FOREIGN KEY(tool_id) REFERENCES tools(id) ON DELETE CASCADE
 		);`,
 	}
@@ -110,10 +117,43 @@ func initSchema(db *sql.DB) error {
 }
 
 func (r *Registry) RegisterTool(tool Tool) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
 	query := `INSERT OR REPLACE INTO tools (name, source, version, last_commit, binary_hash, install_path, type) 
 	          VALUES (?, ?, ?, ?, ?, ?, ?)`
-	_, err := r.db.Exec(query, tool.Name, tool.Source, tool.Version, tool.LastCommit, tool.BinaryHash, tool.InstallPath, tool.Type)
-	return err
+	res, err := tx.Exec(query, tool.Name, tool.Source, tool.Version, tool.LastCommit, tool.BinaryHash, tool.InstallPath, tool.Type)
+	if err != nil {
+		return err
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		// If it was a REPLACE, we might need to find the ID
+		row := tx.QueryRow("SELECT id FROM tools WHERE name = ?", tool.Name)
+		if err := row.Scan(&id); err != nil {
+			return err
+		}
+	}
+
+	// Remove old dependencies
+	_, err = tx.Exec("DELETE FROM tool_dependencies WHERE tool_id = ?", id)
+	if err != nil {
+		return err
+	}
+
+	// Add new dependencies
+	for _, dep := range tool.Dependencies {
+		_, err = tx.Exec("INSERT INTO tool_dependencies (tool_id, dependency_name) VALUES (?, ?)", id, dep)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (r *Registry) GetTool(name string) (*Tool, error) {
@@ -127,6 +167,7 @@ func (r *Registry) GetTool(name string) (*Tool, error) {
 	if err != nil {
 		return nil, err
 	}
+	t.Dependencies, _ = r.loadDependencies(t.ID)
 	return &t, nil
 }
 
@@ -141,6 +182,7 @@ func (r *Registry) GetToolByPath(path string) (*Tool, error) {
 	if err != nil {
 		return nil, err
 	}
+	t.Dependencies, _ = r.loadDependencies(t.ID)
 	return &t, nil
 }
 
@@ -158,9 +200,28 @@ func (r *Registry) ListTools() ([]Tool, error) {
 		if err := rows.Scan(&t.ID, &t.Name, &t.Source, &t.Version, &t.LastCommit, &t.BinaryHash, &t.InstallPath, &t.Type); err != nil {
 			return nil, err
 		}
+		t.Dependencies, _ = r.loadDependencies(t.ID)
 		tools = append(tools, t)
 	}
 	return tools, nil
+}
+
+func (r *Registry) loadDependencies(toolID int) ([]string, error) {
+	rows, err := r.db.Query("SELECT dependency_name FROM tool_dependencies WHERE tool_id = ?", toolID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var deps []string
+	for rows.Next() {
+		var dep string
+		if err := rows.Scan(&dep); err != nil {
+			return nil, err
+		}
+		deps = append(deps, dep)
+	}
+	return deps, nil
 }
 
 func (r *Registry) RemoveTool(name string) error {
