@@ -18,7 +18,12 @@ The service operates over the Anyisland Unix Domain Socket (UDS). Managed applic
 
 ## IPC Protocol
 
-Applications communicate with the service by connecting to the socket at `~/.anyisland/anyisland.sock`.
+Applications communicate with the service by connecting to the socket at `~/.anyisland/anyisland.sock`. 
+
+### Protocol Details
+*   **Framing**: The service expects a stream of JSON objects.
+*   **Persistence**: Connections are persistent. You can send multiple requests (e.g., a stream of frames) over a single connection to avoid the overhead of repeated handshakes.
+*   **Encoding**: UTF-8.
 
 ### 1. Screenshots (`VISUAL_SHOT`)
 
@@ -91,14 +96,51 @@ Send this every time the application view changes.
 
 ---
 
+## Recording Timing & Performance
+
+To achieve "perfect" recordings, keep the following in mind:
+
+1.  **Target Framerate**: The service encodes video at **24 FPS**.
+2.  **Clock Sync**: You should ship a frame to the service approximately every **41ms**.
+3.  **Deduplication**: The service intelligently deduplicates identical consecutive frames in memory.
+4.  **Dirty-Checking**: For best performance, only ship a frame when your TUI's `Update` loop triggers a visual change.
+
+---
+
 ## Implementation Guide
 
 ### Environment Discovery
 Managed applications should check for the `ANYISLAND_IPC_SOCK` environment variable to locate the socket.
 
-### Performance Considerations
-*   **Frame Deduplication**: The service automatically deduplicates identical frames. Applications should only push frames when the view actually changes (`isDirty`).
-*   **Backgrounding**: In Anyisland, rendering and encoding happen in a worker pool. Pushing frames to the socket is extremely fast and will not cause lag in your TUI.
+### Example Implementation (Go)
+
+```go
+func takeShot(ansi string) {
+	// Connect to the Anyisland socket
+	conn, err := net.Dial("unix", os.Getenv("ANYISLAND_IPC_SOCK"))
+	if err != nil {
+		return
+	}
+	defer conn.Close()
+
+	req := map[string]interface{}{
+		"op":      "VISUAL_SHOT",
+		"tool":    "my-tool",
+		"payload": ansi,
+	}
+	
+	// Send request
+	json.NewEncoder(conn).Encode(req)
+	
+	// Read response
+	var resp struct{ Path string; Status string }
+	json.NewDecoder(conn).Decode(&resp)
+	
+	if resp.Status == "SUCCESS" {
+		fmt.Printf("Screenshot saved to: %s\n", resp.Path)
+	}
+}
+```
 
 ### Storage
 All exported assets are stored in the `visual/` directory within the island:
