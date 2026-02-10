@@ -15,12 +15,13 @@ import (
 	"github.com/nathfavour/anyisland/internal/crypto"
 	"github.com/nathfavour/anyisland/internal/history"
 	"github.com/nathfavour/anyisland/internal/pal"
-	"github.com/nathfavour/anyisland/internal/registry"
-	"github.com/nathfavour/anyisland/pkg/discovery"
-		"github.com/spf13/cobra"
+	        "github.com/nathfavour/anyisland/internal/registry"
+	        "github.com/nathfavour/anyisland/internal/tui"
+	        "github.com/nathfavour/anyisland/pkg/discovery"
+	        "github.com/spf13/cobra"
+	        tea "github.com/charmbracelet/bubbletea"
 	)
-	
-	var (
+		var (
 		sourceFlag string
 	rootCmd = &cobra.Command{
 		Use:   "anyisland",
@@ -888,135 +889,142 @@ import (
 	                                                                Short: "Manage the Anyisland background daemon",
 	                                                        }
 	                                        
-	                                                        daemonStartCmd = &cobra.Command{
-	                                                                Use:   "daemon start",
-	                                                                Short: "Start the Anyisland daemon",
-	                                                                RunE: func(cmd *cobra.Command, args []string) error {
-	                                                                        sys, err := pal.New()
-	                                                                        if err != nil {
-	                                                                                return err
-	                                                                        }
-	                                        
-	                                                                        fmt.Println("Starting Anyisland daemon...")
-	                                                                        ctx, cancel := context.WithCancel(cmd.Context())
-	                                                                        defer cancel()
-	                                        
-	                                                                        // Setup Signal Handling
-	                                                                        sigChan := make(chan os.Signal, 1)
-	                                                                        signal.Notify(sigChan, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
-	                                                                        go func() {
-	                                                                                for sig := range sigChan {
-	                                                                                                                                                                                        switch sig {
-	                                                                                                                                                                                        case syscall.SIGHUP:
-	                                                                                                                                                                                                fmt.Println("Received SIGHUP, performing hot-swap...")
-	                                                                                                                                                                                                lm := cli.NewLifecycleManager(sys)
-	                                                                                                                                                                                                if err := lm.HotSwap(""); err != nil {
-	                                                                                                                                                                                                        fmt.Printf("Hot-swap failed: %v\n", err)
-	                                                                                                                                                                                                }
-	                                                                                                                                                                                        case syscall.SIGINT, syscall.SIGTERM:
-	                                                                                                                                                                                                fmt.Println("Shutting down daemon...")
-	                                                                                                                                                                                                cancel()
-	                                                                                                                                                                                        }
-	                                                                                }
-	                                                                        }()
-	                                        
-	                                                                                                                                                                        reg, err := registry.Open(sys.GetIslandDir())
-	                                                                                                                                                                        if err != nil {
-	                                                                                                                                return err
-	                                                                                                                        }
-							defer reg.Close()
-	                                        
-	                                                                                                        broker := cli.NewUpdateBroker(sys, reg)
-	                                        
-	                                                                                                        go func() {
-	                                        
-	                                                                                                                if err := broker.Start(ctx); err != nil {
-	                                        
-	                                                                                                                        fmt.Printf("Broker error: %v\n", err)
-	                                        
-	                                                                                                                }
-	                                        
-	                                                                                                        }()
-	                                        
-	                                                                        
-	                                        
-	                                                                                                        // Start Discovery Server (UDP)
-	                                        
-	                                                                                                        srv, err := discovery.NewServer(1995)
-	                                        
-	                                                                                                        if err != nil {
-	                                        
-	                                                                                                                return fmt.Errorf("failed to start discovery server: %w", err)
-	                                        
-	                                                                                                        }
-	                                        
-	                                                                                                        defer srv.Close()
-	                                        
-	                                                                        
-	                                        
-	                                                                                                        fmt.Println("Anyisland Daemon listening on UDP :1995 and UDS :anyisland.sock")
-	                                        
-	                                                                        
-	                                        
-	                                                                                                        go func() {
-	                                        
-	                                                                                                                err = srv.Listen(func(p discovery.Packet) {
-	                                        
-	                                                                                                                        fmt.Printf("Received packet: %+v\n", p)
-	                                        
-	                                                                                                                        if p.Op == "REGISTER" {
-	                                        
-	                                                                                                                                err := reg.RegisterTool(registry.Tool{
-	                                        
-	                                                                                                                                        Name:    p.Name,
-	                                        
-	                                                                                                                                        Source:  p.Source,
-	                                        
-	                                                                                                                                        Version: p.Version,
-	                                        
-	                                                                                                                                        Type:    p.Type,
-	                                        
-	                                                                                                                                })
-	                                        
-	                                                                                                                                if err != nil {
-	                                        
-	                                                                                                                                        fmt.Printf("failed to register tool: %v\n", err)
-	                                        
-	                                                                                                                                } else {
-	                                        
-	                                                                                                                                        fmt.Printf("Registered tool: %s\n", p.Name)
-	                                        
-	                                                                                                                                }
-	                                        
-	                                                                                                                        }
-	                                        
-	                                                                                                                })
-	                                        
-	                                                                                                                if err != nil {
-	                                        
-	                                                                                                                        fmt.Printf("Discovery server error: %v\n", err)
-	                                        
-	                                                                                                                }
-	                                        
-	                                                                                                        }()
-	                                        
-	                                                                                                        
-	                                        
-	                                                                                                                                        <-ctx.Done()
-	                                        
-	                                                                                                        
-	                                        
-	                                                                                                                                        return nil
-	                                        
-	                                                                                                        
-	                                        
-	                                                                                                                                },
-	                                        
-	                                                                                                        
-	                                        
-	                                                                                                                        }
-	                                        
-	                                                                                                        
+	                                                        	daemonStartCmd = &cobra.Command{
+	                                                        		Use:   "start",
+	                                                        		Short: "Start the Anyisland daemon",
+	                                                        		RunE: func(cmd *cobra.Command, args []string) error {
+	                                                        			sys, err := pal.New()
+	                                                        			if err != nil {
+	                                                        				return err
+	                                                        			}
+	                                                        
+	                                                        			fmt.Println("Starting Anyisland daemon...")
+	                                                        			ctx, cancel := context.WithCancel(cmd.Context())
+	                                                        			defer cancel()
+	                                                        
+	                                                        			// Setup Signal Handling
+	                                                        			sigChan := make(chan os.Signal, 1)
+	                                                        			signal.Notify(sigChan, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
+	                                                        			go func() {
+	                                                        				for sig := range sigChan {
+	                                                        					switch sig {
+	                                                        					case syscall.SIGHUP:
+	                                                        						fmt.Println("Received SIGHUP, performing hot-swap...")
+	                                                        						lm := cli.NewLifecycleManager(sys)
+	                                                        						if err := lm.HotSwap(""); err != nil {
+	                                                        							fmt.Printf("Hot-swap failed: %v\n", err)
+	                                                        						}
+	                                                        					case syscall.SIGINT, syscall.SIGTERM:
+	                                                        						fmt.Println("Shutting down daemon...")
+	                                                        						cancel()
+	                                                        					}
+	                                                        				}
+	                                                        			}()
+	                                                        
+	                                                        			reg, err := registry.Open(sys.GetIslandDir())
+	                                                        			if err != nil {
+	                                                        				return err
+	                                                        			}
+	                                                        			defer reg.Close()
+	                                                        
+	                                                        			broker := cli.NewUpdateBroker(sys, reg)
+	                                                        
+	                                                        			go func() {
+	                                                        
+	                                                        				if err := broker.Start(ctx); err != nil {
+	                                                        
+	                                                        					fmt.Printf("Broker error: %v\n", err)
+	                                                        
+	                                                        				}
+	                                                        
+	                                                        			}()
+	                                                        
+	                                                        			// Start Discovery Server (UDP)
+	                                                        
+	                                                        			srv, err := discovery.NewServer(1995)
+	                                                        
+	                                                        			if err != nil {
+	                                                        
+	                                                        				return fmt.Errorf("failed to start discovery server: %w", err)
+	                                                        
+	                                                        			}
+	                                                        
+	                                                        			defer srv.Close()
+	                                                        
+	                                                        			fmt.Println("Anyisland Daemon listening on UDP :1995 and UDS :anyisland.sock")
+	                                                        
+	                                                        			go func() {
+	                                                        
+	                                                        				err = srv.Listen(func(p discovery.Packet) {
+	                                                        
+	                                                        					fmt.Printf("Received packet: %+v\n", p)
+	                                                        
+	                                                        					if p.Op == "REGISTER" {
+	                                                        
+	                                                        						err := reg.RegisterTool(registry.Tool{
+	                                                        
+	                                                        							Name:    p.Name,
+	                                                        
+	                                                        							Source:  p.Source,
+	                                                        
+	                                                        							Version: p.Version,
+	                                                        
+	                                                        							Type:    p.Type,
+	                                                        
+	                                                        						})
+	                                                        
+	                                                        						if err != nil {
+	                                                        
+	                                                        							fmt.Printf("failed to register tool: %v\n", err)
+	                                                        
+	                                                        						} else {
+	                                                        
+	                                                        							fmt.Printf("Registered tool: %s\n", p.Name)
+	                                                        
+	                                                        						}
+	                                                        
+	                                                        					}
+	                                                        
+	                                                        				})
+	                                                        
+	                                                        				if err != nil {
+	                                                        
+	                                                        					fmt.Printf("Discovery server error: %v\n", err)
+	                                                        
+	                                                        				}
+	                                                        
+	                                                        			}()
+	                                                        
+	                                                        			<-ctx.Done()
+	                                                        
+	                                                        			return nil
+	                                                        
+	                                                        		},
+	                                                        	}
+	                                                        
+	                                                        	tuiCmd = &cobra.Command{
+	                                                        		Use:   "tui",
+	                                                        		Short: "Open the Anyisland Command Center",
+	                                                        		RunE: func(cmd *cobra.Command, args []string) error {
+	                                                        			sys, err := pal.New()
+	                                                        			if err != nil {
+	                                                        				return err
+	                                                        			}
+	                                                        			reg, err := registry.Open(sys.GetIslandDir())
+	                                                        			if err != nil {
+	                                                        				return err
+	                                                        			}
+	                                                        			defer reg.Close()
+	                                                        
+	                                                        			import "github.com/nathfavour/anyisland/internal/tui"
+	                                                        			import tea "github.com/charmbracelet/bubbletea"
+	                                                        
+	                                                        			p := tea.NewProgram(tui.NewMainModel(sys, reg), tea.WithAltScreen())
+	                                                        			_, err = p.Run()
+	                                                        			return err
+	                                                        		},
+	                                                        	}
+	                                                        	                                                                                                        
 	                                        
 	                                                                                                        
 	                                        
