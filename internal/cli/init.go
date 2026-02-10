@@ -13,18 +13,18 @@ func InitProject(dir string) error {
 	name := filepath.Base(absDir)
 	path := filepath.Join(absDir, "anyisland.json")
 	m := Manifest{
-		Name:        name,
-		Version:     "0.1.0",
-		Description: "A new tool managed by Anyisland.",
-		InstallDir:  "", // Optional: override default installation path (~/.anyisland/bin)
+		Name:         name,
+		Version:      "0.1.0",
+		Description:  "A new tool managed by Anyisland.",
+		Dependencies: []string{},
+		InstallDir:   "", // Optional: override default installation path (~/.anyisland/bin)
 		Build: agent.BuildPlan{
 			Steps: []string{"go build -o " + name},
 			Bin:   name,
 		},
 		Runtime: &RuntimeConfig{
-			Dependencies: []string{},
-			Daemon:       false,
-			Pulse:        false,
+			Daemon: false,
+			Pulse:  false,
 		},
 	}
 

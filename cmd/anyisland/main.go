@@ -1325,61 +1325,72 @@ import (
 	                        	                        ag := getSynthesizer()
 	                        ingestor := cli.NewIngestor(ag, sys)
 	
-	                        for _, t := range toUpdate {
-	                                source := t.Source
-	                                                                        if sourceFlag != "" && len(toUpdate) == 1 {
-	                                                                              source = sourceFlag
+	                                                        for _, t := range toUpdate {
+	                                                                source := t.Source
+	                                                                if sourceFlag != "" && len(toUpdate) == 1 {
+	                                                                        source = sourceFlag
+	                                                                }
+	                                                                fmt.Printf("Checking %s for updates...\n", t.Name)
+	                        
+	                                                                resolved, err := ingestor.ResolveDependencies(cmd.Context(), source)
+	                                                                if err != nil {
+	                                                                        fmt.Printf("Error resolving dependencies for %s: %v\n", t.Name, err)
+	                                                                        continue
+	                                                                }
+	                        
+	                                                                for _, pkg := range resolved {
+	                                                                        manifest := pkg.Manifest
+	                                                                        commit := pkg.Commit
+	                                                                        pkgSource := pkg.Source
+	                        
+	                                                                        if manifest.Name == "anyisland" {
+	                                                                                continue
 	                                                                        }
-	                                                                                                                fmt.Printf("Checking %s for updates...\n", t.Name)
-	                                                                                                                
-	                                                                                                                                                                                                                                                                                                                                                                latestCommit, _ := ingestor.DiscoverLatestCommit(cmd.Context(), source)
-	                                                                                                                                                                                                                                                                                                                                                                if latestCommit != "" && t.LastCommit == latestCommit {
-	                                                                                                                                                                                                                                                                                                                                                                        lm := cli.NewLifecycleManager(sys)
-	                                                                                                                                                                                                                                                                                                                                                                        if err := lm.HealTool(cmd.Context(), ag, t.Name); err == nil {
-	                                                                                                                                                                                                                                                                                                                                                                                fmt.Printf("%s is already up-to-date and healthy (%s)\n", t.Name, cli.ShortCommit(latestCommit))
-	                                                                                                                                                                                                                                                                                                                                                                                continue
-	                                                                                                                                                                                                                                                                                                                                                                        } else {
-	                                                                                                                                                                                                                                                                                                                                                                                fmt.Printf("Attempting full re-installation of %s...\n", t.Name)
-	                                                                                                                                                                                                                                                                                                                                                                        }
-	                                                                                                                                                                                                                                                                                                                                                                }	                                                                                                                                                                                                
-	                                                                                                                                                                                                                                        manifest, commit, _, err := ingestor.Ingest(cmd.Context(), source)
-	                                                                                                                                                                                                                                        
-	                                                                                                                                                                                                                                        if err != nil {
-	                                                                                                                                                                                                                                        
-	                                                                                                                                                                                                                                                                                                                      fmt.Printf("Error ingesting %s: %v\n", t.Name, err)
-	                                                                                                                                                                                                                                        
-	                                                                                                                                                                                                                                                                                                                      continue
-	                                                                                                                                                                                                                                        
-	                                                                                                                                                                                                                                                                                                                }
-	                                                                                                                                                                                                
-	                                                                                                                                                                                                                                        if t.LastCommit != commit {
-	                                                                                                                                                                                                                                                fmt.Printf("Updating %s from %s to %s...\n", t.Name, cli.ShortCommit(t.LastCommit), cli.ShortCommit(commit))
-	                                                                                                                                                                                                                                        }	                                                                                                                                                
-	                                                                                                                                                
-	                                                                                                                                                
-	                                                                                                                                                                                                                        hash, installPath, err := ingestor.Build(cmd.Context(), manifest, source)	                                
-	                                                                                                        if err != nil {
-	                                
-	                                                                                                              fmt.Printf("Error building %s: %v\n", t.Name, err)
-	                                
-	                                                                                                              continue
-	                                
-	                                                                                                        }
-	                                
-	                                                                                                        reg.RegisterTool(registry.Tool{
-	                                                                                                                Name:        manifest.Name,
-	                                                                                                                Source:      source,
-	                                                                                                                Version:     manifest.Version,
-	                                                                                                                LastCommit:  commit,
-	                                                                                                                BinaryHash:  hash,
-	                                                                                                                InstallPath: installPath,
-	                                                                                                                Type:        "source",
-	                                                                                                        })
-	                                	
-	                                fmt.Printf("%s updated successfully!\n", t.Name)
-	                        }
-	
-	                        return nil
+	                        
+	                                                                        existing, _ := reg.GetTool(manifest.Name)
+	                                                                        if existing != nil && existing.LastCommit == commit {
+	                                                                                lm := cli.NewLifecycleManager(sys)
+	                                                                                if err := lm.HealTool(cmd.Context(), ag, manifest.Name); err == nil {
+	                                                                                        // If it's the main tool we're updating, we can say it's up to date.
+	                                                                                        // For dependencies, we just skip silently if they're healthy.
+	                                                                                        if manifest.Name == t.Name {
+	                                                                                                fmt.Printf("%s is already up-to-date and healthy (%s)\n", t.Name, cli.ShortCommit(commit))
+	                                                                                        }
+	                                                                                        continue
+	                                                                                }
+	                                                                        }
+	                        
+	                                                                        if existing != nil && existing.LastCommit != commit {
+	                                                                                fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, cli.ShortCommit(existing.LastCommit), cli.ShortCommit(commit))
+	                                                                        } else if existing == nil {
+	                                                                                fmt.Printf("Installing new dependency: %s\n", manifest.Name)
+	                                                                        }
+	                        
+	                                                                        hash, installPath, err := ingestor.Build(cmd.Context(), manifest, pkgSource)
+	                                                                        if err != nil {
+	                                                                                fmt.Printf("Error building %s: %v\n", manifest.Name, err)
+	                                                                                continue
+	                                                                        }
+	                        
+	                                                                        reg.RegisterTool(registry.Tool{
+	                                                                                Name:         manifest.Name,
+	                                                                                Source:       pkgSource,
+	                                                                                Version:      manifest.Version,
+	                                                                                LastCommit:   commit,
+	                                                                                BinaryHash:   hash,
+	                                                                                InstallPath:  installPath,
+	                                                                                Type:         "source",
+	                                                                                Dependencies: manifest.Dependencies,
+	                                                                        })
+	                                                                        
+	                                                                        if manifest.Name == t.Name {
+	                                                                                fmt.Printf("%s updated successfully!\n", t.Name)
+	                                                                        } else {
+	                                                                                fmt.Printf("Dependency %s updated/installed successfully!\n", manifest.Name)
+	                                                                        }
+	                                                                }
+	                                                        }
+	                        	                        return nil
 	                },
 	        }
 	)
