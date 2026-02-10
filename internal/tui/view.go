@@ -64,6 +64,9 @@ func (m MainModel) View() string {
 	bodyHeight := m.height - 7
 	if m.state == commandMode {
 		bodyHeight--
+		if len(m.suggestions) > 0 {
+			bodyHeight--
+		}
 	}
 
 	body := windowStyle.Width(m.width - 2).Height(bodyHeight).Render(content)
@@ -71,6 +74,10 @@ func (m MainModel) View() string {
 
 	// Command Line / Status Bar
 	if m.state == commandMode {
+		if len(m.suggestions) > 0 {
+			doc.WriteString("\n")
+			doc.WriteString(m.renderSuggestions())
+		}
 		doc.WriteString("\n")
 		doc.WriteString(m.textInput.View())
 	} else {
@@ -80,6 +87,18 @@ func (m MainModel) View() string {
 	}
 
 	return docStyle.Render(doc.String())
+}
+
+func (m MainModel) renderSuggestions() string {
+	var s []string
+	for i, suggest := range m.suggestions {
+		style := suggestStyle
+		if i == m.selectedSuggest {
+			style = suggestActiveStyle
+		}
+		s = append(s, style.Render("/"+suggest))
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, s...)
 }
 
 func (m MainModel) renderStatusBar() string {
