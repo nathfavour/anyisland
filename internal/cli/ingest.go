@@ -473,6 +473,7 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 	var readmeContent string
 
 	if _, err := os.Stat(repoURL); err == nil {
+		absPath, _ := filepath.Abs(repoURL)
 		manifestPath := filepath.Join(absPath, "anyisland.json")
 		if _, err := os.Stat(manifestPath); err == nil {
 			m, err := LoadManifest(manifestPath)
@@ -497,7 +498,7 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 	} else {
 		parts := strings.Split(strings.TrimPrefix(repoURL, "https://github.com/"), "/")
 		if len(parts) < 2 {
-			return nil, commit, fmt.Errorf("invalid GitHub URL: %s", repoURL)
+			return nil, commit, finalURL, fmt.Errorf("invalid GitHub URL: %s", repoURL)
 		}
 		owner = parts[0]
 		repo = parts[1]
