@@ -16,6 +16,7 @@ const sidebars: SidebarsConfig = {
     {type: 'doc', id: 'intro', label: 'Introduction'},
     {type: 'doc', id: 'architecture', label: 'Architecture'},
     {type: 'doc', id: 'manifest-spec', label: 'Manifest Specification'},
+    {type: 'doc', id: 'visual-service', label: 'Visual Export Service'},
     {
       type: 'category',
       label: 'System Lifecycle',
