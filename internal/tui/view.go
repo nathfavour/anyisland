@@ -9,17 +9,11 @@ import (
 
 func (m MainModel) View() string {
 	if m.err != nil {
-		return fmt.Sprintf("
-  Error: %v
-
-  Press q to quit.", m.err)
+		return fmt.Sprintf("\n  Error: %v\n\n  Press q to quit.", m.err)
 	}
 
 	if m.loading {
-		return fmt.Sprintf("
-  %s Loading tools...
-
-  Press q to quit.", m.spinner.View())
+		return fmt.Sprintf("\n  %s Loading tools...\n\n  Press q to quit.", m.spinner.View())
 	}
 
 	doc := strings.Builder{}
@@ -37,8 +31,7 @@ func (m MainModel) View() string {
 	}
 	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
 	doc.WriteString(row)
-	doc.WriteString("
-")
+	doc.WriteString("\n")
 
 	// Content
 	var content string
@@ -46,24 +39,14 @@ func (m MainModel) View() string {
 	case toolsView:
 		content = m.list.View()
 	case visualsView:
-		content = "
-  Visual Gallery coming soon...
-  (Preview shots and recordings here)"
+		content = "\n  Visual Gallery coming soon...\n  (Preview shots and recordings here)"
 	case pulseView:
-		content = "
-  Pulse Dashboard coming soon...
-  (Monitor connected tools and background tasks)"
+		content = "\n  Pulse Dashboard coming soon...\n  (Monitor connected tools and background tasks)"
 	case helpView:
-		content = "
-  Help & Instructions
-
-" +
-			"  tab / shift+tab: Cycle tabs
-" +
-			"  up / down: Navigate list
-" +
-			"  /: Filter tools
-" +
+		content = "\n  Help & Instructions\n\n" +
+			"  tab / shift+tab: Cycle tabs\n" +
+			"  up / down: Navigate list\n" +
+			"  /: Filter tools\n" +
 			"  q: Quit"
 	}
 
@@ -72,8 +55,7 @@ func (m MainModel) View() string {
 
 	// Status bar
 	status := m.renderStatusBar()
-	doc.WriteString("
-")
+	doc.WriteString("\n")
 	doc.WriteString(status)
 
 	return docStyle.Render(doc.String())
