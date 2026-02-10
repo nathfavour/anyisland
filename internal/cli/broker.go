@@ -81,43 +81,49 @@ func (b *UpdateBroker) Start(ctx context.Context) error {
 func (b *UpdateBroker) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	decoder := json.NewDecoder(conn)
-	var req BrokerRequest
-	if err := decoder.Decode(&req); err != nil {
-		return
-	}
+	encoder := json.NewEncoder(conn)
 
-	switch req.Op {
-	case "HANDSHAKE":
-		resp := b.handleHandshake(conn)
-		json.NewEncoder(conn).Encode(resp)
-	case "QUERY":
-		resp := b.checkTool(req.Tool)
-		json.NewEncoder(conn).Encode(resp)
-	case "VISUAL_SHOT":
-		resp := b.handleShot(req)
-		json.NewEncoder(conn).Encode(resp)
-	case "VISUAL_RECORD_START":
-		resp := b.handleRecordStart(req)
-		json.NewEncoder(conn).Encode(resp)
-	case "VISUAL_RECORD_FRAME":
-		resp := b.handleRecordFrame(req)
-		json.NewEncoder(conn).Encode(resp)
-	case "VISUAL_RECORD_STOP":
-		resp := b.handleRecordStop(req)
-		json.NewEncoder(conn).Encode(resp)
-	case "SUBSCRIBE":
-		b.mu.Lock()
-		b.subscribers[req.Tool] = append(b.subscribers[req.Tool], conn)
-		b.mu.Unlock()
-		// Keep connection open for push notifications
-		for {
-			// Stay alive until client closes
-			buf := make([]byte, 1)
-			if _, err := conn.Read(buf); err != nil {
-				break
+	for {
+		var req BrokerRequest
+		if err := decoder.Decode(&req); err != nil {
+			return
+		}
+
+		var resp BrokerResponse
+		switch req.Op {
+		case "HANDSHAKE":
+			resp = b.handleHandshake(conn)
+		case "QUERY":
+			resp = b.checkTool(req.Tool)
+		case "VISUAL_SHOT":
+			resp = b.handleShot(req)
+		case "VISUAL_RECORD_START":
+			resp = b.handleRecordStart(req)
+		case "VISUAL_RECORD_FRAME":
+			resp = b.handleRecordFrame(req)
+		case "VISUAL_RECORD_STOP":
+			resp = b.handleRecordStop(req)
+		case "SUBSCRIBE":
+			b.mu.Lock()
+			b.subscribers[req.Tool] = append(b.subscribers[req.Tool], conn)
+			b.mu.Unlock()
+			// Keep connection open for push notifications
+			for {
+				// Stay alive until client closes
+				buf := make([]byte, 1)
+				if _, err := conn.Read(buf); err != nil {
+					break
+				}
+			}
+			b.removeSubscriber(req.Tool, conn)
+			return // Exit after subscription ends
+		}
+
+		if resp.Status != "" {
+			if err := encoder.Encode(resp); err != nil {
+				return
 			}
 		}
-		b.removeSubscriber(req.Tool, conn)
 	}
 }
 
