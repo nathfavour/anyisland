@@ -7,7 +7,6 @@ import (
 
 	"github.com/nathfavour/anyisland/internal/pal"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestCryptoManager_GetEncryptionKey(t *testing.T) {
@@ -34,8 +33,7 @@ func TestCryptoManager_GetEncryptionKey(t *testing.T) {
 		mockStore.On("GetMasterKey").Return("", errors.New("not found"))
 		mockStore.On("SetMasterKey", "user-passphrase").Return(nil)
 
-		input := "user-passphrase
-"
+		input := "user-passphrase\n"
 		cm := &CryptoManager{
 			sys:   mockSys,
 			stdin: strings.NewReader(input),
