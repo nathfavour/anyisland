@@ -1002,30 +1002,26 @@ import (
 	                                                        		},
 	                                                        	}
 	                                                        
-	                                                        	tuiCmd = &cobra.Command{
-	                                                        		Use:   "tui",
-	                                                        		Short: "Open the Anyisland Command Center",
-	                                                        		RunE: func(cmd *cobra.Command, args []string) error {
-	                                                        			sys, err := pal.New()
-	                                                        			if err != nil {
+	                                                        		tuiCmd = &cobra.Command{
+	                                                        			Use:   "tui",
+	                                                        			Short: "Open the Anyisland Command Center",
+	                                                        			RunE: func(cmd *cobra.Command, args []string) error {
+	                                                        				sys, err := pal.New()
+	                                                        				if err != nil {
+	                                                        					return err
+	                                                        				}
+	                                                        				reg, err := registry.Open(sys.GetIslandDir())
+	                                                        				if err != nil {
+	                                                        					return err
+	                                                        				}
+	                                                        				defer reg.Close()
+	                                                        	
+	                                                        				p := tea.NewProgram(tui.NewMainModel(sys, reg), tea.WithAltScreen())
+	                                                        				_, err = p.Run()
 	                                                        				return err
-	                                                        			}
-	                                                        			reg, err := registry.Open(sys.GetIslandDir())
-	                                                        			if err != nil {
-	                                                        				return err
-	                                                        			}
-	                                                        			defer reg.Close()
-	                                                        
-	                                                        			import "github.com/nathfavour/anyisland/internal/tui"
-	                                                        			import tea "github.com/charmbracelet/bubbletea"
-	                                                        
-	                                                        			p := tea.NewProgram(tui.NewMainModel(sys, reg), tea.WithAltScreen())
-	                                                        			_, err = p.Run()
-	                                                        			return err
-	                                                        		},
-	                                                        	}
-	                                                        	                                                                                                        
-	                                        
+	                                                        			},
+	                                                        		}
+	                                                        		                                        
 	                                                                                                        
 	                                        
 	                                                                                                        
@@ -1428,6 +1424,8 @@ func init() {
         rootCmd.AddCommand(initCmd)
 
         rootCmd.AddCommand(listCmd)
+
+        rootCmd.AddCommand(tuiCmd)
 
         rootCmd.AddCommand(shellCmd)
 
