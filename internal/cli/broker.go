@@ -291,3 +291,76 @@ func (b *UpdateBroker) removeSubscriber(tool string, conn net.Conn) {
 		}
 	}
 }
+
+func (b *UpdateBroker) handleShot(req BrokerRequest) BrokerResponse {
+	ansi, ok := req.Payload.(string)
+	if !ok {
+		return BrokerResponse{Status: "ERROR", Message: "Payload must be a string (ANSI)"}
+	}
+
+	visualDir := b.sys.GetVisualDir()
+	timestamp := time.Now().Format("2006-01-02_150405")
+	filename := fmt.Sprintf("%s_shot_%s.png", req.Tool, timestamp)
+	finalPath := filepath.Join(visualDir, filename)
+
+	if err := visual.RenderAnsiToPNG(ansi, finalPath); err != nil {
+		return BrokerResponse{Status: "ERROR", Message: fmt.Sprintf("Failed to render screenshot: %v", err)}
+	}
+
+	return BrokerResponse{Status: "SUCCESS", Path: finalPath}
+}
+
+func (b *UpdateBroker) handleRecordStart(req BrokerRequest) BrokerResponse {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	sessionID := req.Session
+	if sessionID == "" {
+		sessionID = fmt.Sprintf("rec-%d", time.Now().UnixNano())
+	}
+
+	b.recordingSessions[sessionID] = visual.NewRecordingSession(sessionID)
+	return BrokerResponse{Status: "SUCCESS", Message: "Recording started", ToolID: sessionID}
+}
+
+func (b *UpdateBroker) handleRecordFrame(req BrokerRequest) BrokerResponse {
+	b.mu.Lock()
+	session, ok := b.recordingSessions[req.Session]
+	b.mu.Unlock()
+
+	if !ok {
+		return BrokerResponse{Status: "ERROR", Message: "Session not found"}
+	}
+
+	ansi, ok := req.Payload.(string)
+	if !ok {
+		return BrokerResponse{Status: "ERROR", Message: "Payload must be a string (ANSI)"}
+	}
+
+	session.AddFrame(ansi)
+	return BrokerResponse{Status: "SUCCESS"}
+}
+
+func (b *UpdateBroker) handleRecordStop(req BrokerRequest) BrokerResponse {
+	b.mu.Lock()
+	session, ok := b.recordingSessions[req.Session]
+	delete(b.recordingSessions, req.Session)
+	b.mu.Unlock()
+
+	if !ok {
+		return BrokerResponse{Status: "ERROR", Message: "Session not found"}
+	}
+
+	session.Mu.Lock()
+	frames := make([]visual.RecordedFrame, len(session.Frames))
+	copy(frames, session.Frames)
+	session.Mu.Unlock()
+
+	visualDir := b.sys.GetVisualDir()
+	path, err := visual.ProcessRecording(frames, visualDir)
+	if err != nil {
+		return BrokerResponse{Status: "ERROR", Message: fmt.Sprintf("Failed to process recording: %v", err)}
+	}
+
+	return BrokerResponse{Status: "SUCCESS", Path: path}
+}

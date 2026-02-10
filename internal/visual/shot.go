@@ -23,11 +23,10 @@ type ansiPart struct {
 
 // PrepareDrawingContext handles the shared logic for both PNG and Raw RGB rendering
 func PrepareDrawingContext(ansi string) (*gg.Context, float64, float64, error) {
-	lines := strings.Split(ansi, "
-")
+	lines := strings.Split(ansi, "\n")
 	reSGR := regexp.MustCompile(`\x1b\[[0-9;]*m`)
 	reCSI := regexp.MustCompile(`\x1b\[[0-9;?]*[A-Za-z]`)
-	reOSC := regexp.MustCompile(`\x1b\][^\x07]*(\x07|\x1b\)`)
+	reOSC := regexp.MustCompile(`\x1b\][^\x07]*(\x07|\x1b\\)`)
 
 	cleanLines := make([]string, 0, len(lines))
 	for _, l := range lines {
@@ -162,14 +161,12 @@ func sanitizeANSI(line string, reCSI, reOSC *regexp.Regexp) string {
 
 func visibleTrimmedWidth(line string, reSGR *regexp.Regexp) int {
 	visible := reSGR.ReplaceAllString(line, "")
-	visible = strings.TrimRight(visible, " 	
-")
+	visible = strings.TrimRight(visible, " \t\n\r")
 	return runewidth.StringWidth(visible)
 }
 
 func lastNonSpaceRune(s string) (rune, bool) {
-	s = strings.TrimRight(s, " 	
-")
+	s = strings.TrimRight(s, " \t\n\r")
 	if s == "" {
 		return 0, false
 	}
@@ -196,8 +193,7 @@ func detectRightBorderColumn(lines []string, reSGR *regexp.Regexp) int {
 	counts := map[int]int{}
 	for _, l := range lines {
 		visible := reSGR.ReplaceAllString(l, "")
-		visible = strings.TrimRight(visible, " 	
-")
+		visible = strings.TrimRight(visible, " \t\n\r")
 		if visible == "" {
 			continue
 		}
