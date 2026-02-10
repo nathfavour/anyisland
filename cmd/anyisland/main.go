@@ -260,105 +260,107 @@ import (
 		},
 	}
 
-	installCmd = &cobra.Command{
-		Use:   "install [url]",
-		Short: "Install a tool from a GitHub URL or local path",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			url := ""
-			if len(args) > 0 {
-				url = args[0]
-			}
-			if sourceFlag != "" {
-				url = sourceFlag
-			}
-			                        if url == "" {
-			                                return fmt.Errorf("must provide a URL, a tool name, or use --source")
-			                        }
-			                        
-			                        // Check if the URL is actually a search query (no dots, no slashes)
-			                        if !strings.Contains(url, "/") && !strings.Contains(url, ".") {
-			                                fmt.Printf("Searching for tool: %s...\n", url)
-			                                ag := getSynthesizer()
-			                                discovered, err := ag.DiscoverTool(cmd.Context(), url)
-			                                if err != nil || discovered == "" || discovered == "NONE" {
-			                                        return fmt.Errorf("could not find a tool matching '%s'. Please provide a full GitHub URL", url)
-			                                }
-			                                fmt.Printf("Found: %s\n", discovered)
-			                                url = discovered
-			                        }
-			
-			                        sys, err := pal.New()
-			
-			if err != nil {
-				return err
-			}
-
-			                        ag := getSynthesizer()
-			                        ingestor := cli.NewIngestor(ag, sys)
-			
-			                                                                        manifest, commit, err := ingestor.Ingest(cmd.Context(), url)
-			                                                                        if err != nil {
-			                                                                                return err
-			                                                                        }
-			                        
-			                                                                                                                                                                        if manifest.Name == "anyisland" {
-			                                                                                                                                                                                return fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
-			                                                                                                                                                                        }
-			                                                                                                                        
-			                                                                                                                                                                                                                                                                        reg, err := registry.Open(sys.GetIslandDir())
-			                                                                                                                                                                                                                                                                        if err != nil {
-			                                                                                                                                                                                                                                return err
-			                                                                                                                                                                                                                        }
-			                                                                                                                                defer reg.Close()
-			                                                                        
-			                                                                                                                                                                        existing, _ := reg.GetTool(manifest.Name)
-			                                                                                                                                                                        if existing != nil {
-			                                                                                                                                                                                if existing.LastCommit == commit {
-			                                                                                                                                                                                        lm := cli.NewLifecycleManager(sys)
-			                                                                                                                                                                                        if err := lm.HealTool(cmd.Context(), ag, manifest.Name); err == nil {
-			                                                                                                                                                                                                fmt.Printf("%s is already up-to-date and healthy (commit: %s)\n", manifest.Name, cli.ShortCommit(commit))
-			                                                                                                                                                                                                return nil
-			                                                                                                                                                                                        } else {
-			                                                                                                                                                                                                fmt.Printf("Attempting full re-installation of %s...\n", manifest.Name)
-			                                                                                                                                                                                        }
-			                                                                                                                                                                                } else {
-			                                                                                                                                                                                                                                                                                                                                                                                                        fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, cli.ShortCommit(existing.LastCommit), cli.ShortCommit(commit))
-			                                                                                                                                                                                                                                                                                                                                                                                                }
-			                                                                                                                                                                                                                                                                                                                                                                                        }
-			                                                                                                                                                                                                                                                                                                                                        fmt.Println("\nProposed Build Plan:")
-			                                                                                                                                                                                                                                        for _, step := range manifest.Build.Steps {
-			                                fmt.Printf("  - %s\n", step)
-			                        }
-			
-			                        fmt.Println("\nExecuting build...")
-			                        hash, installPath, err := ingestor.Build(cmd.Context(), manifest, url)
-			                        if err != nil {
-			                                return err
-			                        }
-			
-			                        err = reg.RegisterTool(registry.Tool{
-			                                Name:        manifest.Name,
-			                                Source:      url,
-			                                Version:     manifest.Version,
-			                                LastCommit:  commit,
-			                                BinaryHash:  hash,
-			                                InstallPath: installPath,
-			                                Type:        "source",
-			                        })
-						
-			if err != nil {
-				return err
-			}
-
-			                        fmt.Printf("\nSuccessfully installed %s!\n", manifest.Build.Bin)
-
-			
-			return nil
-		},
-	}
-
-	        listCmd = &cobra.Command{
+	        installCmd = &cobra.Command{
+	                Use:   "install [url]",
+	                Short: "Install a tool from a GitHub URL or local path",
+	                Args:  cobra.MaximumNArgs(1),
+	                RunE: func(cmd *cobra.Command, args []string) error {
+	                        url := ""
+	                        if len(args) > 0 {
+	                                url = args[0]
+	                        }
+	                        if sourceFlag != "" {
+	                                url = sourceFlag
+	                        }
+	                        if url == "" {
+	                                return fmt.Errorf("must provide a URL, a tool name, or use --source")
+	                        }
+	
+	                        sys, err := pal.New()
+	                        if err != nil {
+	                                return err
+	                        }
+	
+	                        ag := getSynthesizer()
+	                        ingestor := cli.NewIngestor(ag, sys)
+	
+	                        fmt.Printf("Resolving dependencies for %s...\n", url)
+	                        resolved, err := ingestor.ResolveDependencies(cmd.Context(), url)
+	                        if err != nil {
+	                                return err
+	                        }
+	
+	                        reg, err := registry.Open(sys.GetIslandDir())
+	                        if err != nil {
+	                                return err
+	                        }
+	                        defer reg.Close()
+	
+	                        for i, pkg := range resolved {
+	                                manifest := pkg.Manifest
+	                                commit := pkg.Commit
+	                                source := pkg.Source
+	
+	                                if manifest.Name == "anyisland" {
+	                                        if len(resolved) == 1 {
+	                                                return fmt.Errorf("this repository identifies as Anyisland. Use 'anyisland update' to manage the manager")
+	                                        }
+	                                        fmt.Println("Skipping anyisland core update during dependency installation.")
+	                                        continue
+	                                }
+	
+	                                if i < len(resolved)-1 {
+	                                        fmt.Printf("\n📦 Installing dependency: %s\n", manifest.Name)
+	                                } else {
+	                                        fmt.Printf("\n🚀 Installing: %s\n", manifest.Name)
+	                                }
+	
+	                                existing, _ := reg.GetTool(manifest.Name)
+	                                if existing != nil {
+	                                        if existing.LastCommit == commit {
+	                                                lm := cli.NewLifecycleManager(sys)
+	                                                if err := lm.HealTool(cmd.Context(), ag, manifest.Name); err == nil {
+	                                                        fmt.Printf("%s is already up-to-date and healthy (commit: %s)\n", manifest.Name, cli.ShortCommit(commit))
+	                                                        continue
+	                                                } else {
+	                                                        fmt.Printf("Attempting full re-installation of %s...\n", manifest.Name)
+	                                                }
+	                                        } else {
+	                                                fmt.Printf("Updating %s from %s to %s...\n", manifest.Name, cli.ShortCommit(existing.LastCommit), cli.ShortCommit(commit))
+	                                        }
+	                                }
+	
+	                                fmt.Println("Proposed Build Plan:")
+	                                for _, step := range manifest.Build.Steps {
+	                                        fmt.Printf("  - %s\n", step)
+	                                }
+	
+	                                fmt.Println("Executing build...")
+	                                hash, installPath, err := ingestor.Build(cmd.Context(), manifest, source)
+	                                if err != nil {
+	                                        return err
+	                                }
+	
+	                                err = reg.RegisterTool(registry.Tool{
+	                                        Name:         manifest.Name,
+	                                        Source:       source,
+	                                        Version:      manifest.Version,
+	                                        LastCommit:   commit,
+	                                        BinaryHash:   hash,
+	                                        InstallPath:  installPath,
+	                                        Type:         "source",
+	                                        Dependencies: manifest.Dependencies,
+	                                })
+	                                if err != nil {
+	                                        return err
+	                                }
+	                        }
+	
+	                        fmt.Println("\nInstallation complete!")
+	                        return nil
+	                },
+	        }
+		        listCmd = &cobra.Command{
 
 	                Use:   "list",
 
@@ -683,7 +685,7 @@ import (
 			                        ag := getSynthesizer()
 			                        ingestor := cli.NewIngestor(ag, sys)
 			
-			                                                                        manifest, commit, err := ingestor.Ingest(cmd.Context(), url)
+			                                                                        manifest, commit, _, err := ingestor.Ingest(cmd.Context(), url)
 			                                                                        if err != nil {
 			                                                                                return err
 			                                                                        }
@@ -1153,7 +1155,7 @@ import (
 	                                                                                                                                                                                                                                                                                                                                                                                
 	                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 	                                                                                                                                                                                                                                                                                                                                                                                
-	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        manifest, commit, err := ingestor.Ingest(cmd.Context(), "https://github.com/nathfavour/anyisland")
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        manifest, commit, _, err := ingestor.Ingest(cmd.Context(), "https://github.com/nathfavour/anyisland")
 	                                                                                                                                                                                                                                                                                                                                                                                
 	                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 	                                                                                                                                                                                                                                                                                                                                                                                
@@ -1342,7 +1344,7 @@ import (
 	                                                                                                                                                                                                                                                                                                                                                                                fmt.Printf("Attempting full re-installation of %s...\n", t.Name)
 	                                                                                                                                                                                                                                                                                                                                                                        }
 	                                                                                                                                                                                                                                                                                                                                                                }	                                                                                                                                                                                                
-	                                                                                                                                                                                                                                        manifest, commit, err := ingestor.Ingest(cmd.Context(), source)
+	                                                                                                                                                                                                                                        manifest, commit, _, err := ingestor.Ingest(cmd.Context(), source)
 	                                                                                                                                                                                                                                        
 	                                                                                                                                                                                                                                        if err != nil {
 	                                                                                                                                                                                                                                        
