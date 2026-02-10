@@ -174,10 +174,23 @@ func (m *LifecycleManager) HealTool(ctx context.Context, ag agent.Synthesizer, t
 		if _, err := os.Stat(sourceDir); os.IsNotExist(err) {
 			isBroken = true
 			reason = "source directory missing"
-		} else if _, err := os.Stat(filepath.Join(sourceDir, ".git")); os.IsNotExist(err) {
-			// Some tools might delete .git to "clean up" but we need it for updates
-			isBroken = true
-			reason = "source directory corrupted (missing .git)"
+		} else {
+			// Only require .git if it's NOT a local absolute path
+			// (meaning it's a cached remote repo)
+			isLocal := false
+			if filepath.IsAbs(t.Source) {
+				if _, err := os.Stat(t.Source); err == nil {
+					isLocal = true
+				}
+			}
+
+			if !isLocal {
+				if _, err := os.Stat(filepath.Join(sourceDir, ".git")); os.IsNotExist(err) {
+					// Some tools might delete .git to "clean up" but we need it for updates
+					isBroken = true
+					reason = "source directory corrupted (missing .git)"
+				}
+			}
 		}
 	}
 

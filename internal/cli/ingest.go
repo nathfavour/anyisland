@@ -38,6 +38,16 @@ func NewIngestor(ag agent.Synthesizer, sys pal.System) *Ingestor {
 
 func (i *Ingestor) DiscoverLatestCommit(ctx context.Context, repoURL string) (string, error) {
 	repoURL = normalizeRepoURL(repoURL)
+
+	// Optimization: If it's a local path, try to get the local HEAD directly
+	if _, err := os.Stat(repoURL); err == nil {
+		cmd := exec.CommandContext(ctx, "git", "-C", repoURL, "rev-parse", "HEAD")
+		output, err := cmd.Output()
+		if err == nil {
+			return strings.TrimSpace(string(output)), nil
+		}
+	}
+
 	cmd := exec.CommandContext(ctx, "git", "ls-remote", repoURL, "HEAD")
 	output, err := cmd.Output()
 	if err != nil {
