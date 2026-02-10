@@ -14,33 +14,40 @@ import (
 	"github.com/nathfavour/anyisland/internal/agent"
 	"github.com/nathfavour/anyisland/internal/pal"
 	"github.com/nathfavour/anyisland/internal/registry"
+	"github.com/nathfavour/anyisland/internal/visual"
 )
 
 type BrokerRequest struct {
-	Op   string `json:"op"`   // "QUERY", "SUBSCRIBE", "HANDSHAKE"
-	Tool string `json:"tool"` // Tool name
+	Op      string      `json:"op"`      // "QUERY", "SUBSCRIBE", "HANDSHAKE", "VISUAL_SHOT", "VISUAL_RECORD_START", "VISUAL_RECORD_FRAME", "VISUAL_RECORD_STOP"
+	Tool    string      `json:"tool"`    // Tool name
+	Payload interface{} `json:"payload"` // ANSI string for shot or frame
+	Format  string      `json:"format"`  // "png" or "svg" for shot
+	Session string      `json:"session"` // Session ID for recording
 }
 
 type BrokerResponse struct {
-	Status           string `json:"status"` // "STABLE", "UPDATE_AVAIL", "ERROR", "MANAGED", "UNMANAGED"
+	Status           string `json:"status"` // "STABLE", "UPDATE_AVAIL", "ERROR", "MANAGED", "UNMANAGED", "SUCCESS"
 	ToolID           string `json:"tool_id,omitempty"`
 	AnyislandVersion string `json:"anyisland_version,omitempty"`
 	Version          string `json:"version,omitempty"`
 	Message          string `json:"message,omitempty"`
+	Path             string `json:"path,omitempty"` // Path to generated file
 }
 
 type UpdateBroker struct {
-	sys         pal.System
-	reg         *registry.Registry
-	subscribers map[string][]net.Conn
-	mu          sync.Mutex
+	sys              pal.System
+	reg              *registry.Registry
+	subscribers      map[string][]net.Conn
+	recordingSessions map[string]*visual.RecordingSession
+	mu               sync.Mutex
 }
 
 func NewUpdateBroker(sys pal.System, reg *registry.Registry) *UpdateBroker {
 	return &UpdateBroker{
-		sys:         sys,
-		reg:         reg,
-		subscribers: make(map[string][]net.Conn),
+		sys:               sys,
+		reg:               reg,
+		subscribers:       make(map[string][]net.Conn),
+		recordingSessions: make(map[string]*visual.RecordingSession),
 	}
 }
 
@@ -85,6 +92,18 @@ func (b *UpdateBroker) handleConnection(conn net.Conn) {
 		json.NewEncoder(conn).Encode(resp)
 	case "QUERY":
 		resp := b.checkTool(req.Tool)
+		json.NewEncoder(conn).Encode(resp)
+	case "VISUAL_SHOT":
+		resp := b.handleShot(req)
+		json.NewEncoder(conn).Encode(resp)
+	case "VISUAL_RECORD_START":
+		resp := b.handleRecordStart(req)
+		json.NewEncoder(conn).Encode(resp)
+	case "VISUAL_RECORD_FRAME":
+		resp := b.handleRecordFrame(req)
+		json.NewEncoder(conn).Encode(resp)
+	case "VISUAL_RECORD_STOP":
+		resp := b.handleRecordStop(req)
 		json.NewEncoder(conn).Encode(resp)
 	case "SUBSCRIBE":
 		b.mu.Lock()
