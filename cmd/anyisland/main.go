@@ -342,17 +342,17 @@ import (
 	                                        return err
 	                                }
 	
-	                                err = reg.RegisterTool(registry.Tool{
-	                                        Name:         manifest.Name,
-	                                        Source:       source,
-	                                        Version:      manifest.Version,
-	                                        LastCommit:   commit,
-	                                        BinaryHash:   hash,
-	                                        InstallPath:  installPath,
-	                                        Type:         "source",
-	                                        Dependencies: manifest.Dependencies,
-	                                })
-	                                if err != nil {
+	                                                                        err = reg.RegisterTool(registry.Tool{
+	                                                                                Name:         manifest.Name,
+	                                                                                Source:       source,
+	                                                                                SourceDir:    manifest.SourceDir,
+	                                                                                Version:      manifest.Version,
+	                                                                                LastCommit:   commit,
+	                                                                                BinaryHash:   hash,
+	                                                                                InstallPath:  installPath,
+	                                                                                Type:         "source",
+	                                                                                Dependencies: manifest.Dependencies,
+	                                                                        })	                                if err != nil {
 	                                        return err
 	                                }
 	                        }
@@ -726,17 +726,17 @@ import (
 	                                                        return err
 	                                                }
 	                
-	                                                err = reg.RegisterTool(registry.Tool{
-	                                                        Name:         manifest.Name,
-	                                                        Source:       source,
-	                                                        Version:      manifest.Version,
-	                                                        LastCommit:   commit,
-	                                                        BinaryHash:   hash,
-	                                                        InstallPath:  installPath,
-	                                                        Type:         "source",
-	                                                        Dependencies: manifest.Dependencies,
-	                                                })
-	                                                if err != nil {
+	                                                                                        err = reg.RegisterTool(registry.Tool{
+	                                                                                                Name:         manifest.Name,
+	                                                                                                Source:       source,
+	                                                                                                SourceDir:    manifest.SourceDir,
+	                                                                                                Version:      manifest.Version,
+	                                                                                                LastCommit:   commit,
+	                                                                                                BinaryHash:   hash,
+	                                                                                                InstallPath:  installPath,
+	                                                                                                Type:         "source",
+	                                                                                                Dependencies: manifest.Dependencies,
+	                                                                                        })	                                                if err != nil {
 	                                                        return err
 	                                                }
 	                                        }
@@ -1220,40 +1220,43 @@ import (
 	        
 	                                                                                                
 	        
-	                                                                                                                                                                                                                                                                                        reg.RegisterTool(registry.Tool{
-	        
-	                                                                                                
-	        
-	                                                                                                                                                                                                                                                                                                Name:        manifest.Name,
-	        
-	                                                                                                
-	        
-	                                                                                                                                                                                                                                                                                                Source:      "https://github.com/nathfavour/anyisland",
-	        
-	                                                                                                
-	        
-	                                                                                                                                                                                                                                                                                                Version:     manifest.Version,
-	        
-	                                                                                                
-	        
-	                                                                                                                                                                                                                                                                                                LastCommit:  commit,
-	        
-	                                                                                                
-	        
-	                                                                                                                                                                                                                                                                                                BinaryHash:  hash,
-	        
-	                                                                                                
-	        
-	                                                                                                                                                                                                                                                                                                InstallPath: installPath,
-	        
-	                                                                                                
-	        
-	                                                                                                                                                                                                                                                                                                Type:        "source",
-	        
-	                                                                                                
-	        
-	                                                                                                                                                                                                                                                                                        })
-	        
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        reg.RegisterTool(registry.Tool{
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Name:        manifest.Name,
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Source:      "https://github.com/nathfavour/anyisland",
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                SourceDir:   manifest.SourceDir,
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Version:     manifest.Version,
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                LastCommit:  commit,
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                BinaryHash:  hash,
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                InstallPath: installPath,
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Type:        "source",
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                
+	                                                                                                                                                                                                                                                                                                        
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        })	        
 	                                                                                                
 	        
 	                                                                                                                                                                                                                                                                                        reg.Close()

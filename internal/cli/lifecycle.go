@@ -229,6 +229,7 @@ func (m *LifecycleManager) HealTool(ctx context.Context, ag agent.Synthesizer, t
 	t.InstallPath = installPath
 	t.Version = manifest.Version
 	t.LastCommit = commit
+	t.SourceDir = manifest.SourceDir
 	if err := reg.RegisterTool(*t); err != nil {
 		return fmt.Errorf("failed to update registry after heal: %w", err)
 	}
