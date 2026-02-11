@@ -2,6 +2,7 @@
 anyisland
 anyisland-local
 test-project/
+build/
 
 # Go
 *.exe

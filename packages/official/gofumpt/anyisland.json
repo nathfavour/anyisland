@@ -3,7 +3,7 @@
   "version": "latest",
   "build": {
     "steps": [
-      "go build -o gofumpt mvdan.cc/gofumpt"
+      "mkdir -p build && go build -o build/gofumpt mvdan.cc/gofumpt"
     ],
     "bin": "gofumpt"
   }

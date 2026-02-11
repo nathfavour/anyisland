@@ -17,6 +17,7 @@ func InitProject(dir string) error {
 		Version:      "0.1.0",
 		Description:  "A new tool managed by Anyisland.",
 		Dependencies: []string{},
+		SourceDir:    "", // Optional: custom path for source code (e.g. ~/code/mytool)
 		InstallDir:   "", // Optional: override default installation path (~/.anyisland/bin)
 		Build: agent.BuildPlan{
 			Steps: []string{"go build -o " + name},

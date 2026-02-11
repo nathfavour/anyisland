@@ -35,6 +35,24 @@ func TestLoadManifest(t *testing.T) {
 		assert.Equal(t, "test-tool", m.Build.Bin)
 	})
 
+	t.Run("Load manifest with SourceDir", func(t *testing.T) {
+		content := `{
+			"name": "test-source-dir",
+			"version": "1.0.0",
+			"source_dir": "~/code/test-tool",
+			"build": {
+				"steps": ["go build"],
+				"bin": "test-tool"
+			}
+		}`
+		err := os.WriteFile(manifestPath, []byte(content), 0644)
+		require.NoError(t, err)
+
+		m, err := LoadManifest(manifestPath)
+		assert.NoError(t, err)
+		assert.Equal(t, "~/code/test-tool", m.SourceDir)
+	})
+
 	t.Run("Load non-existent file", func(t *testing.T) {
 		_, err := LoadManifest("non-existent.json")
 		assert.Error(t, err)

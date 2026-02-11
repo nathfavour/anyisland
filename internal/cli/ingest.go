@@ -164,6 +164,13 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 	repoURL = normalizeRepoURL(repoURL)
 	workDir := i.getSourcePath(repoURL, m.Name)
 
+	if m.SourceDir != "" {
+		customDir := i.expandPath(m.SourceDir)
+		if _, err := os.Stat(repoURL); err != nil {
+			workDir = customDir
+		}
+	}
+
 	// Security: Prevent anyisland from being cloned into its own source dir 
 	// (e.g. if someone tries to install anyisland into anyisland)
 	if m.Name == "anyisland" {
@@ -348,6 +355,10 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 		wrapperPath := filepath.Join(targetDir, m.Name)
 		wrapperContent := fmt.Sprintf("#!/bin/bash\ncd %s && ./%s \"$@\"\n", appDir, exeName)
 		os.WriteFile(wrapperPath, []byte(wrapperContent), 0755)
+
+		// Clean up the build output in source directory
+		_ = os.RemoveAll(srcBin)
+
 		return "", wrapperPath, nil
 	}
 
@@ -409,6 +420,9 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 	if err := os.WriteFile(dstBin, input, 0755); err != nil {
 		return "", "", err
 	}
+
+	// Clean up: Remove the original binary from the source directory to prevent bloat
+	_ = os.Remove(srcBin)
 
 	hash := calculateFileHash(dstBin)
 	return hash, dstBin, nil

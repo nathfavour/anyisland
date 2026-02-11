@@ -3,7 +3,7 @@
   "version": "latest",
   "build": {
     "steps": [
-      "go build -o staticcheck honnef.co/go/tools/cmd/staticcheck"
+      "mkdir -p build && go build -o build/staticcheck honnef.co/go/tools/cmd/staticcheck"
     ],
     "bin": "staticcheck"
   }

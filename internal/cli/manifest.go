@@ -20,6 +20,7 @@ type Manifest struct {
 	Description  string          `json:"description,omitempty"`
 	Repository   string          `json:"repository,omitempty"`
 	Dependencies []string        `json:"dependencies,omitempty"`
+	SourceDir    string          `json:"source_dir,omitempty"`  // Custom path to store or find source code
 	InstallDir   string          `json:"install_dir,omitempty"` // Root-level override for installation path
 	Build        agent.BuildPlan `json:"build"`
 	Runtime      *RuntimeConfig  `json:"runtime,omitempty"`
