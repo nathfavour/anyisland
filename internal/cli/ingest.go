@@ -23,16 +23,18 @@ import (
 )
 
 type Ingestor struct {
-	gh    *github.Client
-	agent agent.Synthesizer
-	sys   pal.System
+	gh       *github.Client
+	agent    agent.Synthesizer
+	sys      pal.System
+	resolver *Resolver
 }
 
 func NewIngestor(ag agent.Synthesizer, sys pal.System) *Ingestor {
 	return &Ingestor{
-		gh:    github.NewClient(nil),
-		agent: ag,
-		sys:   sys,
+		gh:       github.NewClient(nil),
+		agent:    ag,
+		sys:      sys,
+		resolver: NewResolver(),
 	}
 }
 
@@ -489,13 +491,18 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 			repoURL, _ = filepath.Abs(filepath.Dir(officialPath))
 			fmt.Printf("Using official package manifest: %s\n", officialPath)
 		} else {
-			fmt.Printf("Searching for tool: %s...\n", originalURL)
-			discovered, err := i.agent.DiscoverTool(ctx, originalURL)
-			if err == nil && discovered != "" && discovered != "NONE" {
-				fmt.Printf("Found: %s\n", discovered)
+			discovered, err := i.resolver.Resolve(ctx, originalURL)
+			if err == nil && discovered != "" {
 				repoURL = normalizeRepoURL(discovered)
 			} else {
-				fmt.Printf("Discovery failed or returned NONE for %s: %v\n", originalURL, err)
+				// Final fallback to AI if resolver fails
+				fmt.Printf("Deep searching for tool: %s...\n", originalURL)
+				discovered, err := i.agent.DiscoverTool(ctx, originalURL)
+				if err == nil && discovered != "" && discovered != "NONE" {
+					repoURL = normalizeRepoURL(discovered)
+				} else {
+					return nil, "", "", fmt.Errorf("could not find a repository for '%s'", originalURL)
+				}
 			}
 		}
 	}
