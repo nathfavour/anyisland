@@ -7,13 +7,13 @@ import (
 )
 
 type Packet struct {
-	Op      string `json:"op"`
-	Name    string `json:"name"`
-	Source  string `json:"source"`
-	Version string `json:"version"`
-	Type    string `json:"type"`
+        Op        string `json:"op"`
+        Name      string `json:"name"`
+        Source    string `json:"source"`
+        SourceDir string `json:"source_dir"`
+        Version   string `json:"version"`
+        Type      string `json:"type"`
 }
-
 type Server struct {
 	conn *net.UDPConn
 }

@@ -94,6 +94,7 @@ func (m *LifecycleManager) SelfInstall() error {
 		reg.RegisterTool(registry.Tool{
 			Name:        "anyisland",
 			Source:      "https://github.com/nathfavour/anyisland",
+			SourceDir:   os.Getenv("PWD"), // Assume current dir for self-install
 			Version:     Version,
 			LastCommit:  Commit,
 			InstallPath: targetPath,
@@ -330,6 +331,7 @@ func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Sy
 		reg.RegisterTool(registry.Tool{
 			Name:        manifest.Name,
 			Source:      "https://github.com/nathfavour/anyisland",
+			SourceDir:   manifest.SourceDir,
 			Version:     manifest.Version,
 			LastCommit:  latest,
 			BinaryHash:  hash,
