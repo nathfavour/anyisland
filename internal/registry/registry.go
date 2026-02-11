@@ -12,6 +12,7 @@ type Tool struct {
 	ID           int
 	Name         string
 	Source       string
+	SourceDir    string
 	Version      string
 	LastCommit   string
 	BinaryHash   string
@@ -49,6 +50,7 @@ func initSchema(db *sql.DB) error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT UNIQUE NOT NULL,
 			source TEXT NOT NULL,
+			source_dir TEXT,
 			version TEXT NOT NULL,
 			last_commit TEXT,
 			binary_hash TEXT,
@@ -76,6 +78,7 @@ func initSchema(db *sql.DB) error {
 
 	// 2. Migration: Add missing columns to existing tools table
 	columns := map[string]string{
+		"source_dir":   "TEXT",
 		"last_commit":  "TEXT",
 		"binary_hash":  "TEXT",
 		"install_path": "TEXT",
