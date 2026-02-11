@@ -160,10 +160,10 @@ func (r *Registry) RegisterTool(tool Tool) error {
 }
 
 func (r *Registry) GetTool(name string) (*Tool, error) {
-	query := `SELECT id, name, source, version, COALESCE(last_commit, ''), COALESCE(binary_hash, ''), COALESCE(install_path, ''), type FROM tools WHERE name = ?`
+	query := `SELECT id, name, source, COALESCE(source_dir, ''), version, COALESCE(last_commit, ''), COALESCE(binary_hash, ''), COALESCE(install_path, ''), type FROM tools WHERE name = ?`
 	row := r.db.QueryRow(query, name)
 	var t Tool
-	err := row.Scan(&t.ID, &t.Name, &t.Source, &t.Version, &t.LastCommit, &t.BinaryHash, &t.InstallPath, &t.Type)
+	err := row.Scan(&t.ID, &t.Name, &t.Source, &t.SourceDir, &t.Version, &t.LastCommit, &t.BinaryHash, &t.InstallPath, &t.Type)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -175,10 +175,10 @@ func (r *Registry) GetTool(name string) (*Tool, error) {
 }
 
 func (r *Registry) GetToolByPath(path string) (*Tool, error) {
-	query := `SELECT id, name, source, version, COALESCE(last_commit, ''), COALESCE(binary_hash, ''), COALESCE(install_path, ''), type FROM tools WHERE install_path = ?`
+	query := `SELECT id, name, source, COALESCE(source_dir, ''), version, COALESCE(last_commit, ''), COALESCE(binary_hash, ''), COALESCE(install_path, ''), type FROM tools WHERE install_path = ?`
 	row := r.db.QueryRow(query, path)
 	var t Tool
-	err := row.Scan(&t.ID, &t.Name, &t.Source, &t.Version, &t.LastCommit, &t.BinaryHash, &t.InstallPath, &t.Type)
+	err := row.Scan(&t.ID, &t.Name, &t.Source, &t.SourceDir, &t.Version, &t.LastCommit, &t.BinaryHash, &t.InstallPath, &t.Type)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -190,7 +190,7 @@ func (r *Registry) GetToolByPath(path string) (*Tool, error) {
 }
 
 func (r *Registry) ListTools() ([]Tool, error) {
-	query := `SELECT id, name, source, version, COALESCE(last_commit, ''), COALESCE(binary_hash, ''), COALESCE(install_path, ''), type FROM tools`
+	query := `SELECT id, name, source, COALESCE(source_dir, ''), version, COALESCE(last_commit, ''), COALESCE(binary_hash, ''), COALESCE(install_path, ''), type FROM tools`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -200,7 +200,7 @@ func (r *Registry) ListTools() ([]Tool, error) {
 	var tools []Tool
 	for rows.Next() {
 		var t Tool
-		if err := rows.Scan(&t.ID, &t.Name, &t.Source, &t.Version, &t.LastCommit, &t.BinaryHash, &t.InstallPath, &t.Type); err != nil {
+		if err := rows.Scan(&t.ID, &t.Name, &t.Source, &t.SourceDir, &t.Version, &t.LastCommit, &t.BinaryHash, &t.InstallPath, &t.Type); err != nil {
 			return nil, err
 		}
 		t.Dependencies, _ = r.loadDependencies(t.ID)
