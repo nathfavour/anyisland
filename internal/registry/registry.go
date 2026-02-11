@@ -126,9 +126,9 @@ func (r *Registry) RegisterTool(tool Tool) error {
 	}
 	defer tx.Rollback()
 
-	query := `INSERT OR REPLACE INTO tools (name, source, version, last_commit, binary_hash, install_path, type) 
-	          VALUES (?, ?, ?, ?, ?, ?, ?)`
-	res, err := tx.Exec(query, tool.Name, tool.Source, tool.Version, tool.LastCommit, tool.BinaryHash, tool.InstallPath, tool.Type)
+	query := `INSERT OR REPLACE INTO tools (name, source, source_dir, version, last_commit, binary_hash, install_path, type) 
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+	res, err := tx.Exec(query, tool.Name, tool.Source, tool.SourceDir, tool.Version, tool.LastCommit, tool.BinaryHash, tool.InstallPath, tool.Type)
 	if err != nil {
 		return err
 	}
