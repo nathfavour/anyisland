@@ -351,11 +351,11 @@ import (
 	                                                                                BinaryHash:   hash,
 	                                                                                InstallPath:  installPath,
 	                                                                                Type:         "source",
-	                                                                                                                                                                                                                                        Dependencies: manifest.Dependencies,
-	                                                                                                                                                                                                                                })
-	                                                                                                                                                                                        if err != nil {
-	                                                                                                                                                                                                return err
-	                                                                                                                                                                                        }
+	                                                                                                                                                                                                                                                                                                                                                Dependencies: manifest.Dependencies,
+	                                                                                                                                                                                                                                                                                                                                        })
+	                                                                                                                                                                                                                                                                                                if err != nil {
+	                                                                                                                                                                                                                                                                                                        return err
+	                                                                                                                                                                                                                                                                                                }
 	                                                                                                                                                                                }
 	
 	                        fmt.Println("\nInstallation complete!")
@@ -737,7 +737,8 @@ import (
 	                                                                                                InstallPath:  installPath,
 	                                                                                                Type:         "source",
 	                                                                                                Dependencies: manifest.Dependencies,
-	                                                                                        })	                                                if err != nil {
+	                                                                                        })
+if err != nil {
 	                                                        return err
 	                                                }
 	                                        }
