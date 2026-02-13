@@ -344,17 +344,69 @@ var (
 					return err
 				}
 
-				err = reg.RegisterTool(registry.Tool{
-					Name:         manifest.Name,
-					Source:       source,
-					SourceDir:    manifest.SourceDir,
-					Version:      manifest.Version,
-					LastCommit:   commit,
-					BinaryHash:   hash,
-					InstallPath:  installPath,
-					Type:         "source",
-					Dependencies: manifest.Dependencies,
-				})
+				                                absSourceDir := ""
+
+				                                if manifest.SourceDir != "" {
+
+				                                      absSourceDir, _ = filepath.Abs(manifest.SourceDir)
+
+				                                } else {
+
+				                                      absSourceDir = installPath // Fallback if needed, though Build might handle it
+
+				                                }
+
+				                                // Correct way: if it's source, we know where we built it
+
+				                                absSourceDir = filepath.Dir(installPath) // This is not quite right as installPath is bin dir
+
+				
+
+				                                // Let's use what Ingestor uses
+
+				                                absSourceDir = ingestor.getSourcePath(source, manifest.Name)
+
+				                                if manifest.SourceDir != "" {
+
+				                                      customDir := cli.ExpandPath(manifest.SourceDir)
+
+				                                      if filepath.IsAbs(customDir) {
+
+				                                      absSourceDir = customDir
+
+				                                      } else {
+
+				                                      absSourceDir = filepath.Join(absSourceDir, customDir)
+
+				                                      }
+
+				                                }
+
+				
+
+				                                err = reg.RegisterTool(registry.Tool{
+
+				                                      Name:         manifest.Name,
+
+				                                      Source:       source,
+
+				                                      SourceDir:    absSourceDir,
+
+				                                      Version:      manifest.Version,
+
+				                                      LastCommit:   commit,
+
+				                                      BinaryHash:   hash,
+
+				                                      InstallPath:  installPath,
+
+				                                      Type:         "source",
+
+				                                      Dependencies: manifest.Dependencies,
+
+				                                })
+
+				
 				if err != nil {
 					return err
 				}
@@ -983,19 +1035,21 @@ var (
 
 				reg, err := registry.Open(sys.GetIslandDir())
 
-				if err == nil {
-
-					reg.RegisterTool(registry.Tool{
-
-						Name: manifest.Name,
-
-						Source: "https://github.com/nathfavour/anyisland",
-
-						SourceDir: manifest.SourceDir,
-
-						Version: manifest.Version,
-
-						LastCommit: commit,
+				                                if err == nil {
+				                                      absSourceDir := ""
+				                                      if manifest.SourceDir != "" {
+				                                      absSourceDir, _ = filepath.Abs(manifest.SourceDir)
+				                                      }
+				                                      reg.RegisterTool(registry.Tool{
+				
+				                                      Name: manifest.Name,
+				
+				                                      Source: "https://github.com/nathfavour/anyisland",
+				
+				                                      SourceDir: absSourceDir,
+				
+				                                      Version: manifest.Version,
+										LastCommit: commit,
 
 						BinaryHash: hash,
 
