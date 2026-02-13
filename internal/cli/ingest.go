@@ -307,7 +307,9 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 		}
 
 		binName := m.Name
-		if m.Build.Bin != "" {
+		if m.BinName != "" {
+			binName = m.BinName
+		} else if m.Build.Bin != "" {
 			binName = filepath.Base(m.Build.Bin)
 		}
 
@@ -365,6 +367,17 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 			f, _ := os.OpenFile(dstBin, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
 			io.Copy(f, resp.Body)
 			f.Close()
+		}
+
+		// Create aliases
+		for _, alias := range m.Aliases {
+			if alias == binName {
+				continue
+			}
+			aliasPath := filepath.Join(targetDir, alias)
+			_ = os.Remove(aliasPath)
+			fmt.Printf("Creating alias: %s -> %s\n", alias, binName)
+			_ = os.Symlink(binName, aliasPath)
 		}
 
 		hash := calculateFileHash(dstBin)
@@ -618,7 +631,11 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 		return "", "", fmt.Errorf("failed to create target directory: %w", err)
 	}
 
-	dstBin := filepath.Join(targetDir, filepath.Base(plan.Bin))
+	binName := filepath.Base(plan.Bin)
+	if m.BinName != "" {
+		binName = m.BinName
+	}
+	dstBin := filepath.Join(targetDir, binName)
 	fmt.Printf("Installing %s to %s...\n", srcBin, dstBin)
 
 	if _, err := os.Stat(dstBin); err == nil {
@@ -633,6 +650,17 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 	}
 	if err := os.WriteFile(dstBin, input, 0755); err != nil {
 		return "", "", err
+	}
+
+	// Create aliases
+	for _, alias := range m.Aliases {
+		if alias == binName {
+			continue
+		}
+		aliasPath := filepath.Join(targetDir, alias)
+		_ = os.Remove(aliasPath)
+		fmt.Printf("Creating alias: %s -> %s\n", alias, binName)
+		_ = os.Symlink(binName, aliasPath)
 	}
 
 	// Clean up: Remove the original binary from the source directory to prevent bloat
@@ -837,6 +865,21 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		return nil, commit, finalURL, fmt.Errorf("repository is not a buildable tool: %s", discretion.Reason)
 	}
 
+	// Use AI to generate a build plan if no manifest exists
+	aiPlan, err := i.agent.GenerateBuildPlan(ctx, repoURL, files, readmeContent)
+	if err == nil && aiPlan != nil {
+		name := repo
+		if aiPlan.Name != "" {
+			name = aiPlan.Name
+		}
+		manifest = &Manifest{
+			Name:    name,
+			Version: "latest",
+			Build:   *aiPlan,
+		}
+		return manifest, commit, finalURL, nil
+	}
+
 	manifest = &Manifest{
 		Name:    repo,
 		Version: "latest",
@@ -856,17 +899,20 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 	if isGo {
 		if isAnyisland {
 			manifest.Build = agent.BuildPlan{
+				Name:      "anyisland",
 				Toolchain: "go",
 				Steps:     []string{"go build -v -o anyisland ./cmd/anyisland"},
 				Bin:       "anyisland",
 			}
 		} else {
 			manifest.Build = agent.BuildPlan{
+				Name:      repo,
 				Toolchain: "go",
 				Steps:     []string{"go build -v -o " + repo},
 				Bin:       repo,
 			}
 		}
+		manifest.Name = manifest.Build.Name
 	}
 
 	return manifest, commit, finalURL, nil

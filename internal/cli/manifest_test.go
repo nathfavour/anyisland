@@ -53,6 +53,26 @@ func TestLoadManifest(t *testing.T) {
 		assert.Equal(t, "~/code/test-tool", m.SourceDir)
 	})
 
+	t.Run("Load manifest with BinName and Aliases", func(t *testing.T) {
+		content := `{
+			"name": "ripgrep",
+			"bin_name": "rg",
+			"aliases": ["ripgrep-alias"],
+			"version": "13.0.0",
+			"build": {
+				"steps": ["cargo build --release"],
+				"bin": "target/release/rg"
+			}
+		}`
+		err := os.WriteFile(manifestPath, []byte(content), 0644)
+		require.NoError(t, err)
+
+		m, err := LoadManifest(manifestPath)
+		assert.NoError(t, err)
+		assert.Equal(t, "rg", m.BinName)
+		assert.Contains(t, m.Aliases, "ripgrep-alias")
+	})
+
 	t.Run("Load non-existent file", func(t *testing.T) {
 		_, err := LoadManifest("non-existent.json")
 		assert.Error(t, err)

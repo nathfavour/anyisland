@@ -7,6 +7,7 @@ import (
 )
 
 type BuildPlan struct {
+	Name       string   `json:"name,omitempty"` // Suggested tool name (if different from repo)
 	Steps      []string `json:"steps"`
 	Bin        string   `json:"bin"`
 	InstallDir string   `json:"install_dir,omitempty"` // Preferred binary path location

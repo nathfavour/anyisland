@@ -24,6 +24,8 @@ type ReleaseInfo struct {
 
 type Manifest struct {
 	Name         string          `json:"name"`
+	BinName      string          `json:"bin_name,omitempty"` // The actual binary name to be installed in PATH
+	Aliases      []string        `json:"aliases,omitempty"`  // Alternative names/symlinks for the tool
 	Version      string          `json:"version"`
 	Description  string          `json:"description,omitempty"`
 	Repository   string          `json:"repository,omitempty"`

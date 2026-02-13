@@ -108,14 +108,16 @@ README:
 
 CRITICAL REQUIREMENTS:
 1. Return ONLY a valid JSON object. No markdown, no preamble, no explanation.
-2. "steps" must be a list of shell commands to build the project.
-3. "bin" must be the path to the resulting executable binary relative to the repository root.
-4. If the tool is a script (Python, Node.js), point "bin" to the main entry point.
-5. "install_dir" is optional.
-6. If the repository is NOT a buildable software project (e.g., just documentation, a profile README, or static assets), DO NOT return a plan. Instead, return an empty object {} or an error-like structure (but ideally, AnalyzeDiscretion should have caught this).
+2. "name" is the canonical name of the tool/command (e.g., "ripgrep" even if the repo is "BurntSushi/ripgrep").
+3. "steps" must be a list of shell commands to build the project.
+4. "bin" must be the path to the resulting executable binary relative to the repository root.
+5. If the tool is a script (Python, Node.js), point "bin" to the main entry point.
+6. "install_dir" is optional.
+7. If the repository is NOT a buildable software project (e.g., just documentation, a profile README, or static assets), DO NOT return a plan. Instead, return an empty object {} or an error-like structure (but ideally, AnalyzeDiscretion should have caught this).
 
 Structure:
 {
+  "name": "toolname",
   "steps": ["command1", "command2"],
   "bin": "path/to/binary",
   "toolchain": "go|rust|node|python|flutter|...",
