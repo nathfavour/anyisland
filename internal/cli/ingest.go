@@ -194,7 +194,7 @@ func (i *Ingestor) DiscoverLatestCommit(ctx context.Context, repoURL string) (st
 	return parts[0], nil
 }
 
-func (i *Ingestor) getSourcePath(repoURL string, pkgName string) string {
+func (i *Ingestor) GetSourcePath(repoURL string, pkgName string) string {
 	repoURL = normalizeRepoURL(repoURL)
 	if _, err := os.Stat(repoURL); err == nil {
 		abs, _ := filepath.Abs(repoURL)
