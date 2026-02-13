@@ -80,7 +80,7 @@ func (i *Ingestor) DiscoverRelease(ctx context.Context, owner, repo, version str
 	return nil, fmt.Errorf("release %s not found", version)
 }
 
-func (i *Ingestor) MatchAsset(assets []*github.ReleaseAsset) *github.ReleaseAsset {
+func (i *Ingestor) MatchAsset(ctx context.Context, assets []*github.ReleaseAsset) *github.ReleaseAsset {
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
 
@@ -98,28 +98,28 @@ func (i *Ingestor) MatchAsset(assets []*github.ReleaseAsset) *github.ReleaseAsse
 		// OS matching
 		if strings.Contains(name, goos) {
 			score += 10
-		} else if goos == "darwin" && strings.Contains(name, "macos") {
+		} else if goos == "darwin" && (strings.Contains(name, "macos") || strings.Contains(name, "apple") || strings.Contains(name, "osx")) {
 			score += 10
-		} else if goos == "linux" && (strings.Contains(name, "linux") || strings.Contains(name, "musl")) {
+		} else if goos == "linux" && (strings.Contains(name, "linux") || strings.Contains(name, "musl") || strings.Contains(name, "gnu")) {
 			score += 10
 		}
 
 		// Architecture matching
 		if strings.Contains(name, goarch) {
 			score += 5
-		} else if goarch == "amd64" && (strings.Contains(name, "x86_64") || strings.Contains(name, "x64")) {
+		} else if goarch == "amd64" && (strings.Contains(name, "x86_64") || strings.Contains(name, "x64") || strings.Contains(name, "intel")) {
 			score += 5
-		} else if goarch == "arm64" && (strings.Contains(name, "aarch64")) {
+		} else if goarch == "arm64" && (strings.Contains(name, "aarch64") || strings.Contains(name, "armv8")) {
 			score += 5
 		}
 
 		// Penalize debug or source assets if we want binaries
-		if strings.Contains(name, "src") || strings.Contains(name, "source") || strings.Contains(name, "dev") {
+		if strings.Contains(name, "src") || strings.Contains(name, "source") || strings.Contains(name, "dev") || strings.Contains(name, "dbg") {
 			score -= 20
 		}
 
 		// Prefer common archive formats or raw binaries
-		if strings.HasSuffix(name, ".tar.gz") || strings.HasSuffix(name, ".zip") || strings.HasSuffix(name, ".tgz") {
+		if strings.HasSuffix(name, ".tar.gz") || strings.HasSuffix(name, ".zip") || strings.HasSuffix(name, ".tgz") || strings.HasSuffix(name, ".xz") {
 			score += 2
 		}
 
@@ -137,12 +137,35 @@ func (i *Ingestor) MatchAsset(assets []*github.ReleaseAsset) *github.ReleaseAsse
 		return candidates[i].score > candidates[j].score
 	})
 
-	// Best match must at least match the OS
-	if candidates[0].score < 10 {
-		return nil
+	// If the top score is high and clear winner, take it
+	if candidates[0].score >= 15 {
+		if len(candidates) == 1 || candidates[0].score > candidates[1].score+2 {
+			return candidates[0].asset
+		}
 	}
 
-	return candidates[0].asset
+	// Ambiguity or low confidence -> Use AI discretion
+	fmt.Println("🤖 Using AI to select the best binary for your system...")
+	var assetNames []string
+	nameToAsset := make(map[string]*github.ReleaseAsset)
+	for _, c := range candidates {
+		assetNames = append(assetNames, c.asset.GetName())
+		nameToAsset[c.asset.GetName()] = c.asset
+	}
+
+	selectedName, err := i.agent.SelectAsset(ctx, assetNames, goos, goarch)
+	if err == nil && selectedName != "" {
+		if asset, ok := nameToAsset[selectedName]; ok {
+			return asset
+		}
+	}
+
+	// Fallback to top heuristic if AI fails
+	if candidates[0].score >= 10 {
+		return candidates[0].asset
+	}
+
+	return nil
 }
 
 func (i *Ingestor) DiscoverLatestCommit(ctx context.Context, repoURL string) (string, error) {

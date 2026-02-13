@@ -21,6 +21,7 @@ type Synthesizer interface {
 	DebugBuildFailure(ctx context.Context, log string, manifest interface{}) (string, error)
 	DiscoverTool(ctx context.Context, query string) (string, error)
 	ExplainTool(ctx context.Context, name string, manifest interface{}, readme string) (string, error)
+	SelectAsset(ctx context.Context, assets []string, goos, goarch string) (string, error)
 }
 
 type DiscretionResult struct {
