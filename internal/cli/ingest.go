@@ -296,100 +296,11 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 	repoURL = normalizeRepoURL(repoURL)
 	workDir := i.getSourcePath(repoURL, m.Name)
 
-	// Binary Release Path
-	if m.Release != nil && m.Release.IsBinary {
-		targetDir := i.sys.GetIslandBinDir()
-		if m.InstallDir != "" {
-			targetDir = i.expandPath(m.InstallDir)
-		}
-		if err := os.MkdirAll(targetDir, 0755); err != nil {
-			return "", "", err
-		}
-
-		binName := m.Name
-		if m.BinName != "" {
-			binName = m.BinName
-		} else if m.Build.Bin != "" {
-			binName = filepath.Base(m.Build.Bin)
-		}
-
-		dstBin := filepath.Join(targetDir, binName)
-		fmt.Printf("Downloading binary release: %s\n", m.Release.AssetName)
-
-		resp, err := http.Get(m.Release.AssetURL)
-		if err != nil {
-			return "", "", err
-		}
-		defer resp.Body.Close()
-
-		// If it's an archive, extract it
-		if strings.HasSuffix(m.Release.AssetName, ".zip") || strings.HasSuffix(m.Release.AssetName, ".tar.gz") || strings.HasSuffix(m.Release.AssetName, ".tgz") {
-			tmpDir, _ := os.MkdirTemp("", "anyisland-bin-*")
-			defer os.RemoveAll(tmpDir)
-
-			if strings.HasSuffix(m.Release.AssetName, ".zip") {
-				tmpZip := filepath.Join(tmpDir, "asset.zip")
-				f, _ := os.Create(tmpZip)
-				io.Copy(f, resp.Body)
-				f.Close()
-				i.downloadAndUnzip(ctx, "file://"+tmpZip, tmpDir)
-			} else {
-				// Simple tar extractor for common cases
-				cmd := exec.CommandContext(ctx, "tar", "-xz", "-C", tmpDir)
-				cmd.Stdin = resp.Body
-				cmd.Run()
-			}
-
-			// Find the actual binary in extracted files
-			var binaryPath string
-			filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
-				if err == nil && !info.IsDir() && (info.Mode()&0111 != 0 || strings.EqualFold(info.Name(), m.Name)) {
-					binaryPath = path
-					return filepath.SkipDir
-				}
-				return nil
-			})
-
-			if binaryPath == "" {
-				return "", "", fmt.Errorf("could not find binary in release archive")
-			}
-
-			if _, err := os.Stat(dstBin); err == nil {
-				os.Rename(dstBin, dstBin+".bak")
-			}
-			input, _ := os.ReadFile(binaryPath)
-			os.WriteFile(dstBin, input, 0755)
-		} else {
-			// Direct binary download
-			if _, err := os.Stat(dstBin); err == nil {
-				os.Rename(dstBin, dstBin+".bak")
-			}
-			f, _ := os.OpenFile(dstBin, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
-			io.Copy(f, resp.Body)
-			f.Close()
-		}
-
-		// Create aliases
-		for _, alias := range m.Aliases {
-			if alias == binName {
-				continue
-			}
-			aliasPath := filepath.Join(targetDir, alias)
-			_ = os.Remove(aliasPath)
-			fmt.Printf("Creating alias: %s -> %s\n", alias, binName)
-			_ = os.Symlink(binName, aliasPath)
-		}
-
-		hash := calculateFileHash(dstBin)
-		return hash, dstBin, nil
-	}
-
 	if m.SourceDir != "" {
-		customDir := i.expandPath(m.SourceDir)
-		if _, err := os.Stat(repoURL); err != nil {
-			workDir = customDir
-		}
+		workDir = i.expandPath(m.SourceDir)
 	}
+
+	// Binary Release Path
 
 	// Security: Prevent anyisland from being cloned into its own source dir
 	// (e.g. if someone tries to install anyisland into anyisland)
@@ -921,10 +832,12 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 func normalizeRepoURL(url string) string {
 	url = expandPath(url)
 	if !strings.HasPrefix(url, "http") && !strings.HasPrefix(url, "git@") {
-		// Check if it's a local path
-		if _, err := os.Stat(url); err == nil {
-			abs, _ := filepath.Abs(url)
-			return abs
+		// Only check if it's a local path if it starts with . or /
+		if strings.HasPrefix(url, ".") || strings.HasPrefix(url, "/") {
+			if _, err := os.Stat(url); err == nil {
+				abs, _ := filepath.Abs(url)
+				return abs
+			}
 		}
 
 		// If it's a simple name (no dots, no slashes), don't prefix with https:// yet
