@@ -386,3 +386,25 @@ func (v *VibeauraSynthesizer) ExplainTool(ctx context.Context, name string, mani
 	return v.query(ctx, prompt, "ask")
 
 }
+
+func (v *VibeauraSynthesizer) SelectAsset(ctx context.Context, assets []string, goos, goarch string) (string, error) {
+	prompt := fmt.Sprintf(`You are an expert system administrator for Anyisland.
+The user needs to download a pre-built binary for their system.
+Current System: OS=%s, ARCH=%s
+
+Available Assets:
+- %s
+
+Identify the BEST asset for this system.
+CRITICAL:
+1. Return ONLY the filename of the selected asset. No explanation, no markdown.
+2. If none of the assets are suitable for this OS/Arch, return "NONE".
+3. Prefer statically linked binaries (musl/gnu) for Linux and common archive formats (tar.gz, zip).
+`, goos, goarch, strings.Join(assets, "\n- "))
+
+	resp, err := v.query(ctx, prompt, "ask")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(resp), nil
+}

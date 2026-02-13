@@ -269,7 +269,7 @@ func (m *LifecycleManager) HotSwap(targetPath string, extraEnv ...string) error 
 func (m *LifecycleManager) CheckAnyislandUpdate(ctx context.Context, ag agent.Synthesizer) (string, bool, error) {
 	ingestor := NewIngestor(ag, m.sys, nil)
 	repoURL := "https://github.com/nathfavour/anyisland"
-	
+
 	latestCommit, err := ingestor.DiscoverLatestCommit(ctx, repoURL)
 	if err != nil {
 		return "", false, err
@@ -339,9 +339,9 @@ func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Sy
 			Type:        "source",
 		})
 	}
-	
+
 	fmt.Printf("✨ Anyisland auto-updated to %s. Restarting...\n", ShortCommit(latest))
-	
+
 	// HotSwap to the new binary and re-run the original command
 	// We pass a signal that we just updated to avoid redundant "already up to date" messages
 	if err := m.HotSwap(installPath, "ANYISLAND_JUST_UPDATED=1"); err != nil {

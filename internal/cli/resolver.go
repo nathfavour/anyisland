@@ -48,7 +48,7 @@ func (r *Resolver) Resolve(ctx context.Context, query string) (string, error) {
 
 	// Tier 1: Beacon Search (Code Search for anyisland.json)
 	beaconRepos, _ := r.searchBeacon(ctx, query)
-	
+
 	// Tier 2: Broad Search (Repo Search by popularity)
 	broadRepos, _ := r.searchBroad(ctx, query)
 
@@ -97,11 +97,11 @@ func (r *Resolver) Resolve(ctx context.Context, query string) (string, error) {
 func (r *Resolver) searchBeacon(ctx context.Context, query string) ([]Repository, error) {
 	q := fmt.Sprintf("%s filename:anyisland.json", query)
 	u := fmt.Sprintf("https://api.github.com/search/code?q=%s", url.QueryEscape(q))
-	
+
 	req, _ := http.NewRequestWithContext(ctx, "GET", u, nil)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "anyisland-cli")
-	
+
 	resp, err := r.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -130,11 +130,11 @@ func (r *Resolver) searchBeacon(ctx context.Context, query string) ([]Repository
 
 func (r *Resolver) searchBroad(ctx context.Context, query string) ([]Repository, error) {
 	u := fmt.Sprintf("https://api.github.com/search/repositories?q=%s&sort=stars&order=desc", url.QueryEscape(query))
-	
+
 	req, _ := http.NewRequestWithContext(ctx, "GET", u, nil)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "anyisland-cli")
-	
+
 	resp, err := r.client.Do(req)
 	if err != nil {
 		return nil, err

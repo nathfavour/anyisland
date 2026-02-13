@@ -13,7 +13,7 @@ func TestCryptoManager_GetEncryptionKey(t *testing.T) {
 	t.Run("Key found in keyring", func(t *testing.T) {
 		mockSys := new(pal.MockSystem)
 		mockStore := new(pal.MockSecretStore)
-		
+
 		mockSys.On("SecretStore").Return(mockStore)
 		mockStore.On("GetMasterKey").Return("secret-key", nil)
 
@@ -28,7 +28,7 @@ func TestCryptoManager_GetEncryptionKey(t *testing.T) {
 	t.Run("Key not in keyring, prompt user", func(t *testing.T) {
 		mockSys := new(pal.MockSystem)
 		mockStore := new(pal.MockSecretStore)
-		
+
 		mockSys.On("SecretStore").Return(mockStore)
 		mockStore.On("GetMasterKey").Return("", errors.New("not found"))
 		mockStore.On("SetMasterKey", "user-passphrase").Return(nil)
@@ -38,7 +38,7 @@ func TestCryptoManager_GetEncryptionKey(t *testing.T) {
 			sys:   mockSys,
 			stdin: strings.NewReader(input),
 		}
-		
+
 		key, err := cm.GetEncryptionKey()
 
 		assert.NoError(t, err)
@@ -51,9 +51,9 @@ func TestCryptoManager_Encrypt(t *testing.T) {
 	cm := &CryptoManager{}
 	data := "hello world"
 	key := "super-secret-key"
-	
+
 	encrypted := cm.Encrypt(data, key)
-	
+
 	assert.Contains(t, encrypted, "AES256")
 	assert.Contains(t, encrypted, data)
 	assert.Contains(t, encrypted, "sup...")

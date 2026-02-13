@@ -315,7 +315,7 @@ func parseAnsiLine(line string, re *regexp.Regexp) []ansiPart {
 								b := (val % 6) * 51
 								currFg = fmt.Sprintf("#%02x%02x%02x", r, g, b)
 							} else {
-								val = (val - 232) * 10 + 8
+								val = (val-232)*10 + 8
 								currFg = fmt.Sprintf("#%02x%02x%02x", val, val, val)
 							}
 							i += 2

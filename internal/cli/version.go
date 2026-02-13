@@ -68,7 +68,7 @@ func ShortCommit(commit string) string {
 func VersionString() string {
 	commit := GetEffectiveCommit()
 	buildTime := GetEffectiveBuildTime()
-	
-	return fmt.Sprintf("anyisland %s\nCommit: %s\nBuilt: %s\nPlatform: %s/%s\nCompiler: %s", 
+
+	return fmt.Sprintf("anyisland %s\nCommit: %s\nBuilt: %s\nPlatform: %s/%s\nCompiler: %s",
 		Version, commit, buildTime, runtime.GOOS, runtime.GOARCH, GoVersion)
 }

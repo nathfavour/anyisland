@@ -81,11 +81,11 @@ func TestDependencyGraph_Resolve(t *testing.T) {
 
 	// Order should be D, then B and C (in any order), then A
 	// B and C could be swapped depending on map iteration order
-	
+
 	if len(resolved) != 4 {
 		t.Errorf("Expected 4 resolved packages, got %d: %v", len(resolved), resolved)
 	}
-	
+
 	if resolved[3] != "A" {
 		t.Errorf("Expected A to be last, got %s", resolved[3])
 	}

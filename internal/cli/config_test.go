@@ -30,7 +30,7 @@ func TestConfigManager(t *testing.T) {
 	t.Run("Save and Load config", func(t *testing.T) {
 		cfg := &Config{}
 		cfg.Update.AutoUpdate = false
-		
+
 		err := cm.Save(cfg)
 		assert.NoError(t, err)
 

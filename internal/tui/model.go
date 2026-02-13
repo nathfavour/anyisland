@@ -30,26 +30,25 @@ func (i toolItem) Description() string { return i.desc + " (" + i.version + ")" 
 func (i toolItem) FilterValue() string { return i.name }
 
 type MainModel struct {
-	state             sessionState
-	prevState         sessionState
-	sys               pal.System
-	reg               *registry.Registry
-	list              list.Model
-	spinner           spinner.Model
-	textInput         textinput.Model
-	width             int
-	height            int
-	loading           bool
-	err               error
-	tabs              []string
-	recording         *visual.RecordingSession
-	lastStatus        string
-	suggestions       []string
-	selectedSuggest   int
+	state           sessionState
+	prevState       sessionState
+	sys             pal.System
+	reg             *registry.Registry
+	list            list.Model
+	spinner         spinner.Model
+	textInput       textinput.Model
+	width           int
+	height          int
+	loading         bool
+	err             error
+	tabs            []string
+	recording       *visual.RecordingSession
+	lastStatus      string
+	suggestions     []string
+	selectedSuggest int
 }
 
 var allCommands = []string{"quit", "q", "shot", "record", "help"}
-
 
 func NewMainModel(sys pal.System, reg *registry.Registry) MainModel {
 	s := spinner.New()

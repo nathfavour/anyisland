@@ -37,7 +37,7 @@ func (cm *ConfigManager) Load() (*Config, error) {
 		cfg := &Config{}
 		cfg.Update.AutoUpdate = true
 		cfg.Install.Preference = "binary" // Default to binary for speed
-		cfg.Install.DefaultBranch = ""     // Default to repo's default branch
+		cfg.Install.DefaultBranch = ""    // Default to repo's default branch
 		return cfg, nil
 	}
 

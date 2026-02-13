@@ -16,13 +16,13 @@ func AnalyzeDiscretion(files []string, readme string) DiscretionResult {
 	// 2. Identify "Documentation Only" repositories
 	isDocOnly := true
 	docExtensions := []string{".md", ".txt", ".pdf", ".html", ".png", ".jpg"}
-	
+
 	for _, f := range files {
 		ext := ""
 		if idx := strings.LastIndex(f, "."); idx != -1 {
 			ext = f[idx:]
 		}
-		
+
 		isDoc := false
 		for _, docExt := range docExtensions {
 			if strings.EqualFold(ext, docExt) {
@@ -30,7 +30,7 @@ func AnalyzeDiscretion(files []string, readme string) DiscretionResult {
 				break
 			}
 		}
-		
+
 		if !isDoc && !strings.HasPrefix(f, ".") && !strings.Contains(f, "LICENSE") {
 			isDocOnly = false
 			break

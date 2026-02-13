@@ -206,4 +206,3 @@ func (m *MainModel) updateSuggestions() {
 		m.selectedSuggest = 0
 	}
 }
-

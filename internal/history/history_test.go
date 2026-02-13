@@ -34,7 +34,7 @@ func TestHistoryManager_SyncCommand(t *testing.T) {
 	mockAg.On("RedactCommand", mock.Anything, "ls -la /home/user").Return("ls -la /home/user", nil)
 
 	hm := NewManager(mockSys, mockAg)
-	
+
 	err = hm.SyncCommand(context.Background(), "ls -la /home/user")
 	assert.NoError(t, err)
 

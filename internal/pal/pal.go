@@ -17,33 +17,33 @@ type System interface {
 	GetIslandDir() string
 	GetBinDir() string
 	GetIslandBinDir() string
-	        GetDataDir() string
-	        	GetCacheDir() string
-	        	GetSourceDir() string
-	        	GetVisualDir() string
-	        	GetSocketPath() string
-	        	InjectPath() error
-	        	EnsurePath() error
-	        	SecretStore() SecretStore
-	        }
-	        
-	        type BasePAL struct {
-	        	IslandDir string
-	        }
-	        
-	        func (p *BasePAL) GetIslandDir() string {
-	        	return p.IslandDir
-	        }
-	        
-	        func (p *BasePAL) GetSocketPath() string {
-	        	return filepath.Join(p.IslandDir, "anyisland.sock")
-	        }
-	        
-	        func (p *BasePAL) GetVisualDir() string {
-	        	return filepath.Join(p.IslandDir, "visual")
-	        }
-	        
-	func (p *BasePAL) GetBinDir() string {
+	GetDataDir() string
+	GetCacheDir() string
+	GetSourceDir() string
+	GetVisualDir() string
+	GetSocketPath() string
+	InjectPath() error
+	EnsurePath() error
+	SecretStore() SecretStore
+}
+
+type BasePAL struct {
+	IslandDir string
+}
+
+func (p *BasePAL) GetIslandDir() string {
+	return p.IslandDir
+}
+
+func (p *BasePAL) GetSocketPath() string {
+	return filepath.Join(p.IslandDir, "anyisland.sock")
+}
+
+func (p *BasePAL) GetVisualDir() string {
+	return filepath.Join(p.IslandDir, "visual")
+}
+
+func (p *BasePAL) GetBinDir() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".local", "bin")
 }

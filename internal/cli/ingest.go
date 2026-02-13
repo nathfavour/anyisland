@@ -246,7 +246,7 @@ func (i *Ingestor) ResolveDependencies(ctx context.Context, rootSource string) (
 		if err != nil {
 			return fmt.Errorf("failed to ingest %s: %w", source, err)
 		}
-		
+
 		if _, ok := manifests[m.Name]; ok {
 			return nil
 		}
@@ -269,7 +269,7 @@ func (i *Ingestor) ResolveDependencies(ctx context.Context, rootSource string) (
 	}
 
 	rootM, _, _, _ := i.Ingest(ctx, rootSource)
-	
+
 	resolvedNames, err := graph.Resolve(rootM.Name, func(name string) ([]string, error) {
 		if m, ok := manifests[name]; ok {
 			return m.Dependencies, nil
@@ -306,7 +306,12 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 			return "", "", err
 		}
 
-		dstBin := filepath.Join(targetDir, m.Name)
+		binName := m.Name
+		if m.Build.Bin != "" {
+			binName = filepath.Base(m.Build.Bin)
+		}
+
+		dstBin := filepath.Join(targetDir, binName)
 		fmt.Printf("Downloading binary release: %s\n", m.Release.AssetName)
 
 		resp, err := http.Get(m.Release.AssetURL)
@@ -373,7 +378,7 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 		}
 	}
 
-	// Security: Prevent anyisland from being cloned into its own source dir 
+	// Security: Prevent anyisland from being cloned into its own source dir
 	// (e.g. if someone tries to install anyisland into anyisland)
 	if m.Name == "anyisland" {
 		exePath, _ := os.Executable()
@@ -719,6 +724,7 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 	var owner, repo string
 	var files []string
 	var readmeContent string
+	var manifest *Manifest
 
 	if _, err := os.Stat(repoURL); err == nil {
 		absPath, _ := filepath.Abs(repoURL)
@@ -726,26 +732,25 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		if _, err := os.Stat(manifestPath); err == nil {
 			m, err := LoadManifest(manifestPath)
 			if err == nil {
-				if version != "" {
-					m.Version = version
-				}
-				return m, commit, finalURL, nil
+				manifest = m
 			}
 		}
 
 		repo = filepath.Base(absPath)
-		filepath.Walk(absPath, func(path string, info os.FileInfo, err error) error {
-			if err != nil || (info.IsDir() && info.Name() == ".git") {
-				return filepath.SkipDir
-			}
-			rel, _ := filepath.Rel(absPath, path)
-			files = append(files, rel)
-			if strings.ToLower(info.Name()) == "readme.md" {
-				content, _ := os.ReadFile(path)
-				readmeContent = string(content)
-			}
-			return nil
-		})
+		if manifest == nil {
+			filepath.Walk(absPath, func(path string, info os.FileInfo, err error) error {
+				if err != nil || (info.IsDir() && info.Name() == ".git") {
+					return filepath.SkipDir
+				}
+				rel, _ := filepath.Rel(absPath, path)
+				files = append(files, rel)
+				if strings.ToLower(info.Name()) == "readme.md" {
+					content, _ := os.ReadFile(path)
+					readmeContent = string(content)
+				}
+				return nil
+			})
+		}
 	} else {
 		parts := strings.Split(strings.TrimPrefix(repoURL, "https://github.com/"), "/")
 		if len(parts) < 2 {
@@ -753,28 +758,6 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		}
 		owner = parts[0]
 		repo = parts[1]
-
-		// Smart Discovery: Check for Releases first if preference is binary
-		if i.cfg.Install.Preference != "source" {
-			release, err := i.DiscoverRelease(ctx, owner, repo, version)
-			if err == nil && release != nil {
-				asset := i.MatchAsset(release.Assets)
-				if asset != nil {
-					fmt.Printf("✨ Found binary release: %s (%s)\n", release.GetTagName(), asset.GetName())
-					return &Manifest{
-						Name:    repo,
-						Version: release.GetTagName(),
-						Release: &ReleaseInfo{
-							TagName:     release.GetTagName(),
-							AssetURL:    asset.GetBrowserDownloadURL(),
-							AssetName:   asset.GetName(),
-							IsBinary:    true,
-							PublishedAt: release.GetPublishedAt().String(),
-						},
-					}, commit, finalURL, nil
-				}
-			}
-		}
 
 		ghRepo, _, err := i.gh.Repositories.Get(ctx, owner, repo)
 		defaultBranch := "main"
@@ -791,31 +774,61 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 			targetRef = version // Use version as branch/tag if specified
 		}
 
+		// Try to load anyisland.json first
 		rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/anyisland.json", owner, repo, targetRef)
 		curlCmd := exec.CommandContext(ctx, "curl", "-fsSL", rawURL)
 		output, err := curlCmd.Output()
 		if err == nil {
 			var m Manifest
 			if err := json.Unmarshal(output, &m); err == nil {
-				if version != "" {
-					m.Version = version
+				manifest = &m
+			}
+		}
+
+		// Smart Discovery for Binary Release
+		if i.cfg.Install.Preference != "source" {
+			release, err := i.DiscoverRelease(ctx, owner, repo, version)
+			if err == nil && release != nil {
+				asset := i.MatchAsset(ctx, release.Assets)
+				if asset != nil {
+					fmt.Printf("✨ Found binary release: %s (%s)\n", release.GetTagName(), asset.GetName())
+					if manifest == nil {
+						manifest = &Manifest{Name: repo}
+					}
+					manifest.Version = release.GetTagName()
+					manifest.Release = &ReleaseInfo{
+						TagName:     release.GetTagName(),
+						AssetURL:    asset.GetBrowserDownloadURL(),
+						AssetName:   asset.GetName(),
+						IsBinary:    true,
+						PublishedAt: release.GetPublishedAt().String(),
+					}
+					return manifest, commit, finalURL, nil
 				}
-				return &m, commit, finalURL, nil
 			}
 		}
 
-		tree, _, err := i.gh.Git.GetTree(ctx, owner, repo, targetRef, true)
-		if err == nil && tree != nil {
-			for _, entry := range tree.Entries {
-				files = append(files, entry.GetPath())
+		if manifest == nil {
+			tree, _, err := i.gh.Git.GetTree(ctx, owner, repo, targetRef, true)
+			if err == nil && tree != nil {
+				for _, entry := range tree.Entries {
+					files = append(files, entry.GetPath())
+				}
+			}
+
+			readme, _, err := i.gh.Repositories.GetReadme(ctx, owner, repo, &github.RepositoryContentGetOptions{Ref: targetRef})
+			if err == nil && readme != nil {
+				content, _ := readme.GetContent()
+				readmeContent = content
 			}
 		}
+	}
 
-		readme, _, err := i.gh.Repositories.GetReadme(ctx, owner, repo, &github.RepositoryContentGetOptions{Ref: targetRef})
-		if err == nil && readme != nil {
-			content, _ := readme.GetContent()
-			readmeContent = content
+	if manifest != nil {
+		if version != "" {
+			manifest.Version = version
 		}
+		return manifest, commit, finalURL, nil
 	}
 
 	// AI Discretion Check
@@ -824,7 +837,7 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		return nil, commit, finalURL, fmt.Errorf("repository is not a buildable tool: %s", discretion.Reason)
 	}
 
-	manifest := &Manifest{
+	manifest = &Manifest{
 		Name:    repo,
 		Version: "latest",
 	}
@@ -856,8 +869,6 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		}
 	}
 
-	// Self-Conflict Prevention: If the tool identifies as anyisland, 
-	// we must ensure it doesn't overwrite the manager via a generic install.
 	return manifest, commit, finalURL, nil
 }
 
@@ -869,7 +880,7 @@ func normalizeRepoURL(url string) string {
 			abs, _ := filepath.Abs(url)
 			return abs
 		}
-		
+
 		// If it's a simple name (no dots, no slashes), don't prefix with https:// yet
 		// because Ingest will try to discover it.
 		if !strings.Contains(url, ".") && !strings.Contains(url, "/") {

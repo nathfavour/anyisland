@@ -24,7 +24,7 @@ func NewManager(sys pal.System) *CryptoManager {
 
 func (c *CryptoManager) GetEncryptionKey() (string, error) {
 	store := c.sys.SecretStore()
-	
+
 	// 1. Try Platform Keyring
 	key, err := store.GetMasterKey()
 	if err == nil {

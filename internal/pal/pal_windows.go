@@ -16,7 +16,7 @@ func (p *WindowsPAL) InjectPath() error {
 	binDir := p.GetBinDir()
 	islandBinDir := p.GetIslandBinDir()
 	path := os.Getenv("PATH")
-	
+
 	newPath := path
 	changed := false
 	if !strings.Contains(path, binDir) {

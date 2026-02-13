@@ -35,11 +35,11 @@ type BrokerResponse struct {
 }
 
 type UpdateBroker struct {
-	sys              pal.System
-	reg              *registry.Registry
-	subscribers      map[string][]net.Conn
+	sys               pal.System
+	reg               *registry.Registry
+	subscribers       map[string][]net.Conn
 	recordingSessions map[string]*visual.RecordingSession
-	mu               sync.Mutex
+	mu                sync.Mutex
 }
 
 func NewUpdateBroker(sys pal.System, reg *registry.Registry) *UpdateBroker {
@@ -216,25 +216,11 @@ func (b *UpdateBroker) doPoll() {
 
 	}
 
+	lm := NewLifecycleManager(b.sys)
 
+	ag := &agent.HeuristicSynthesizer{} // Use local heuristics for background polling
 
-		lm := NewLifecycleManager(b.sys)
-
-
-
-		ag := &agent.HeuristicSynthesizer{} // Use local heuristics for background polling
-
-
-
-	
-
-
-
-		// Check Anyisland itself
-
-
-
-	
+	// Check Anyisland itself
 
 	latest, available, err := lm.CheckAnyislandUpdate(context.Background(), ag)
 
@@ -245,8 +231,6 @@ func (b *UpdateBroker) doPoll() {
 		b.notifySubscribers("anyisland", latest)
 
 	}
-
-
 
 	for _, t := range tools {
 		if t.Name == "anyisland" {
@@ -273,14 +257,13 @@ func (b *UpdateBroker) doPoll() {
 	}
 }
 
-
-		func (b *UpdateBroker) notifySubscribers(toolName, newVersion string) {
+func (b *UpdateBroker) notifySubscribers(toolName, newVersion string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	conns := b.subscribers[toolName]
 	resp := BrokerResponse{Status: "UPDATE_AVAIL", Version: newVersion}
-	
+
 	for _, conn := range conns {
 		json.NewEncoder(conn).Encode(resp)
 	}

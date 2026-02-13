@@ -91,7 +91,7 @@ func initSchema(db *sql.DB) error {
 		if err != nil {
 			return err
 		}
-		
+
 		found := false
 		for rows.Next() {
 			var cid int

@@ -114,7 +114,7 @@ func (m MainModel) renderStatusBar() string {
 	if m.recording != nil {
 		msg = fmt.Sprintf("🔴 RECORDING (%d frames)", len(m.recording.Frames))
 	}
-	
+
 	status := statusText.
 		Width(m.width - w(nfo) - w(key) - 4).
 		Render(msg)

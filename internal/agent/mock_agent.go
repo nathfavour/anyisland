@@ -49,3 +49,8 @@ func (m *MockSynthesizer) ExplainTool(ctx context.Context, name string, manifest
 	args := m.Called(ctx, name, manifest, readme)
 	return args.String(0), args.Error(1)
 }
+
+func (m *MockSynthesizer) SelectAsset(ctx context.Context, assets []string, goos, goarch string) (string, error) {
+	args := m.Called(ctx, assets, goos, goarch)
+	return args.String(0), args.Error(1)
+}

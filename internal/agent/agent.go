@@ -98,3 +98,8 @@ func (m *HeuristicSynthesizer) ExplainTool(ctx context.Context, name string, man
 	return fmt.Sprintf("Tool: %s. Documentation is available in the source repository.", name), nil
 
 }
+
+func (m *HeuristicSynthesizer) SelectAsset(ctx context.Context, assets []string, goos, goarch string) (string, error) {
+	// Heuristic fallback already tried its best, return empty to allow caller fallback.
+	return "", nil
+}

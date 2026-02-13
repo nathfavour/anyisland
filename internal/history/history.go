@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/nathfavour/anyisland/internal/agent"
-	"github.com/nathfavour/anyisland/internal/pal"
 	"github.com/nathfavour/anyisland/internal/crypto"
+	"github.com/nathfavour/anyisland/internal/pal"
 )
 
 type HistoryManager struct {
@@ -67,7 +67,7 @@ func (h *HistoryManager) GetHistory() ([]string, error) {
 		}
 		return nil, err
 	}
-	
+
 	// Just return the raw lines for now
 	return []string{string(content)}, nil
 }

@@ -8,9 +8,9 @@ import (
 )
 
 type RuntimeConfig struct {
-	Daemon         bool  `json:"daemon,omitempty"`
-	Pulse          bool  `json:"pulse,omitempty"`
-	ManagedUpdates *bool `json:"managed_updates,omitempty"` // If false, Anyisland won't auto-update this tool
+	Daemon         bool   `json:"daemon,omitempty"`
+	Pulse          bool   `json:"pulse,omitempty"`
+	ManagedUpdates *bool  `json:"managed_updates,omitempty"` // If false, Anyisland won't auto-update this tool
 	UpdateCommand  string `json:"update_command,omitempty"`  // Custom command to update the tool
 }
 
