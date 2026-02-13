@@ -296,7 +296,8 @@ import (
 	                                                                                        }
 	                                                        
 	                                                                                        ag := getSynthesizer()
-	                                                                                        ingestor := cli.NewIngestor(ag, sys, cfg)	                        fmt.Printf("Resolving dependencies for %s...\n", url)
+	                                                                                                                                                                                        ingestor := cli.NewIngestor(ag, sys, cfg)
+	                                                                                                                                                        fmt.Printf("Resolving dependencies for %s...\n", url)
 	                        resolved, err := ingestor.ResolveDependencies(cmd.Context(), url)
 	                        if err != nil {
 	                                return err
@@ -1067,14 +1068,19 @@ if err != nil {
 	                updateCmd = &cobra.Command{
 	                        Use:   "update [tool]",
 	                        Short: "Update tools or Anyisland itself",
-	                        RunE: func(cmd *cobra.Command, args []string) error {
-	                                sys, err := pal.New()
-	                                if err != nil {
-	                                        return err
-	                                }
-	        
-	                                                                                                                        if len(args) == 0 || args[0] == "anyisland" {
-	        
+	                                                        RunE: func(cmd *cobra.Command, args []string) error {
+	                                                                sys, err := pal.New()
+	                                                                if err != nil {
+	                                                                        return err
+	                                                                }
+	                        
+	                                                                cm := cli.NewConfigManager(sys)
+	                                                                cfg, _ := cm.Load()
+	                                                                if sourceFlag != "" {
+	                                                                        cfg.Install.Preference = "source"
+	                                                                }
+	                                        
+	                                                                                                                                                        if len(args) == 0 || args[0] == "anyisland" {	        
 	                                                                                                                                lm := cli.NewLifecycleManager(sys)
 	        
 	                                                                                                                                ag := getSynthesizer()
@@ -1171,7 +1177,7 @@ if err != nil {
 	                                                                                                                                                                                                                                                                                                                                                                                
 	                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 	                                                                                                                                                                                                                                                                                                                                                                                
-	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ingestor := cli.NewIngestor(ag, sys)
+	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ingestor := cli.NewIngestor(ag, sys, cfg)
 	                                                                                                                                                                                                                                                                                                                                                                                
 	                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 	                                                                                                                                                                                                                                                                                                                                                                                
@@ -1348,7 +1354,7 @@ if err != nil {
 	                                                                                                                                                                                                                }	                                                                                            }
 	                                                          
 	                        	                        ag := getSynthesizer()
-	                        ingestor := cli.NewIngestor(ag, sys)
+	                        ingestor := cli.NewIngestor(ag, sys, cfg)
 	
 	                                                        for _, t := range toUpdate {
 	                                                                source := t.Source

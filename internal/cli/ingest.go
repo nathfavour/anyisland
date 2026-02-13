@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -731,7 +732,7 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		repo = parts[1]
 
 		// Smart Discovery: Check for Releases first if preference is binary
-		if cfg.Install.Preference != "source" {
+		if i.cfg.Install.Preference != "source" {
 			release, err := i.DiscoverRelease(ctx, owner, repo, version)
 			if err == nil && release != nil {
 				asset := i.MatchAsset(release.Assets)
@@ -760,8 +761,8 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 
 		// Respect pinned branch if any
 		targetRef := defaultBranch
-		if cfg.Install.DefaultBranch != "" {
-			targetRef = cfg.Install.DefaultBranch
+		if i.cfg.Install.DefaultBranch != "" {
+			targetRef = i.cfg.Install.DefaultBranch
 		}
 		if version != "" {
 			targetRef = version // Use version as branch/tag if specified
