@@ -173,7 +173,7 @@ func (m *LifecycleManager) HealTool(ctx context.Context, ag agent.Synthesizer, t
 	// 3. Check source directory (if applicable)
 	sourceDir := t.SourceDir
 	if sourceDir == "" {
-		sourceDir = ingestor.getSourcePath(t.Source, t.Name)
+		sourceDir = ingestor.GetSourcePath(t.Source, t.Name)
 	} else {
 		sourceDir = ingestor.expandPath(sourceDir)
 	}

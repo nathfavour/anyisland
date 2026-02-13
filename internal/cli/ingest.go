@@ -294,7 +294,7 @@ func (i *Ingestor) ResolveDependencies(ctx context.Context, rootSource string) (
 
 func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (string, string, error) {
 	repoURL = normalizeRepoURL(repoURL)
-	workDir := i.getSourcePath(repoURL, m.Name)
+	workDir := i.GetSourcePath(repoURL, m.Name)
 
 	if m.SourceDir != "" {
 		customDir := i.expandPath(m.SourceDir)
