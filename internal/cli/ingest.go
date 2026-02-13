@@ -297,7 +297,13 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 	workDir := i.getSourcePath(repoURL, m.Name)
 
 	if m.SourceDir != "" {
-		workDir = i.expandPath(m.SourceDir)
+		customDir := i.expandPath(m.SourceDir)
+		if filepath.IsAbs(customDir) {
+			workDir = customDir
+		} else {
+			// Relative SourceDir in manifest should be relative to the repo root
+			workDir = filepath.Join(workDir, customDir)
+		}
 	}
 
 	// Binary Release Path
