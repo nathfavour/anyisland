@@ -27,15 +27,121 @@ type Ingestor struct {
 	agent    agent.Synthesizer
 	sys      pal.System
 	resolver *Resolver
+	cfg      *Config
 }
 
-func NewIngestor(ag agent.Synthesizer, sys pal.System) *Ingestor {
+func NewIngestor(ag agent.Synthesizer, sys pal.System, cfg *Config) *Ingestor {
+	if cfg == nil {
+		cm := NewConfigManager(sys)
+		cfg, _ = cm.Load()
+	}
 	return &Ingestor{
 		gh:       github.NewClient(nil),
 		agent:    ag,
 		sys:      sys,
 		resolver: NewResolver(),
+		cfg:      cfg,
 	}
+}
+
+func (i *Ingestor) ParseVersion(input string) (string, string) {
+	if strings.Contains(input, "@") {
+		parts := strings.Split(input, "@")
+		return parts[0], parts[1]
+	}
+	return input, ""
+}
+
+func (i *Ingestor) DiscoverRelease(ctx context.Context, owner, repo, version string) (*github.RepositoryRelease, error) {
+	if version == "" || version == "latest" {
+		release, _, err := i.gh.Repositories.GetLatestRelease(ctx, owner, repo)
+		return release, err
+	}
+
+	// Try as a tag
+	release, _, err := i.gh.Repositories.GetReleaseByTag(ctx, owner, repo, version)
+	if err == nil {
+		return release, nil
+	}
+
+	// If not a specific release tag, list and find
+	releases, _, err := i.gh.Repositories.ListReleases(ctx, owner, repo, &github.ListOptions{PerPage: 100})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, rel := range releases {
+		if rel.GetTagName() == version || rel.GetName() == version {
+			return rel, nil
+		}
+	}
+
+	return nil, fmt.Errorf("release %s not found", version)
+}
+
+func (i *Ingestor) MatchAsset(assets []*github.ReleaseAsset) *github.ReleaseAsset {
+	goos := runtime.GOOS
+	goarch := runtime.GOARCH
+
+	type candidate struct {
+		asset *github.ReleaseAsset
+		score int
+	}
+
+	var candidates []candidate
+
+	for _, asset := range assets {
+		name := strings.ToLower(asset.GetName())
+		score := 0
+
+		// OS matching
+		if strings.Contains(name, goos) {
+			score += 10
+		} else if goos == "darwin" && strings.Contains(name, "macos") {
+			score += 10
+		} else if goos == "linux" && (strings.Contains(name, "linux") || strings.Contains(name, "musl")) {
+			score += 10
+		}
+
+		// Architecture matching
+		if strings.Contains(name, goarch) {
+			score += 5
+		} else if goarch == "amd64" && (strings.Contains(name, "x86_64") || strings.Contains(name, "x64")) {
+			score += 5
+		} else if goarch == "arm64" && (strings.Contains(name, "aarch64")) {
+			score += 5
+		}
+
+		// Penalize debug or source assets if we want binaries
+		if strings.Contains(name, "src") || strings.Contains(name, "source") || strings.Contains(name, "dev") {
+			score -= 20
+		}
+
+		// Prefer common archive formats or raw binaries
+		if strings.HasSuffix(name, ".tar.gz") || strings.HasSuffix(name, ".zip") || strings.HasSuffix(name, ".tgz") {
+			score += 2
+		}
+
+		if score > 0 {
+			candidates = append(candidates, candidate{asset: asset, score: score})
+		}
+	}
+
+	if len(candidates) == 0 {
+		return nil
+	}
+
+	// Sort by score
+	sort.Slice(candidates, func(i, j int) bool {
+		return candidates[i].score > candidates[j].score
+	})
+
+	// Best match must at least match the OS
+	if candidates[0].score < 10 {
+		return nil
+	}
+
+	return candidates[0].asset
 }
 
 func (i *Ingestor) DiscoverLatestCommit(ctx context.Context, repoURL string) (string, error) {
@@ -166,6 +272,76 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 	repoURL = normalizeRepoURL(repoURL)
 	workDir := i.getSourcePath(repoURL, m.Name)
 
+	// Binary Release Path
+	if m.Release != nil && m.Release.IsBinary {
+		targetDir := i.sys.GetIslandBinDir()
+		if m.InstallDir != "" {
+			targetDir = i.expandPath(m.InstallDir)
+		}
+		if err := os.MkdirAll(targetDir, 0755); err != nil {
+			return "", "", err
+		}
+
+		dstBin := filepath.Join(targetDir, m.Name)
+		fmt.Printf("Downloading binary release: %s\n", m.Release.AssetName)
+
+		resp, err := http.Get(m.Release.AssetURL)
+		if err != nil {
+			return "", "", err
+		}
+		defer resp.Body.Close()
+
+		// If it's an archive, extract it
+		if strings.HasSuffix(m.Release.AssetName, ".zip") || strings.HasSuffix(m.Release.AssetName, ".tar.gz") || strings.HasSuffix(m.Release.AssetName, ".tgz") {
+			tmpDir, _ := os.MkdirTemp("", "anyisland-bin-*")
+			defer os.RemoveAll(tmpDir)
+
+			if strings.HasSuffix(m.Release.AssetName, ".zip") {
+				tmpZip := filepath.Join(tmpDir, "asset.zip")
+				f, _ := os.Create(tmpZip)
+				io.Copy(f, resp.Body)
+				f.Close()
+				i.downloadAndUnzip(ctx, "file://"+tmpZip, tmpDir)
+			} else {
+				// Simple tar extractor for common cases
+				cmd := exec.CommandContext(ctx, "tar", "-xz", "-C", tmpDir)
+				cmd.Stdin = resp.Body
+				cmd.Run()
+			}
+
+			// Find the actual binary in extracted files
+			var binaryPath string
+			filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
+				if err == nil && !info.IsDir() && (info.Mode()&0111 != 0 || strings.EqualFold(info.Name(), m.Name)) {
+					binaryPath = path
+					return filepath.SkipDir
+				}
+				return nil
+			})
+
+			if binaryPath == "" {
+				return "", "", fmt.Errorf("could not find binary in release archive")
+			}
+
+			if _, err := os.Stat(dstBin); err == nil {
+				os.Rename(dstBin, dstBin+".bak")
+			}
+			input, _ := os.ReadFile(binaryPath)
+			os.WriteFile(dstBin, input, 0755)
+		} else {
+			// Direct binary download
+			if _, err := os.Stat(dstBin); err == nil {
+				os.Rename(dstBin, dstBin+".bak")
+			}
+			f, _ := os.OpenFile(dstBin, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+			io.Copy(f, resp.Body)
+			f.Close()
+		}
+
+		hash := calculateFileHash(dstBin)
+		return hash, dstBin, nil
+	}
+
 	if m.SourceDir != "" {
 		customDir := i.expandPath(m.SourceDir)
 		if _, err := os.Stat(repoURL); err != nil {
@@ -195,7 +371,11 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 			if err := os.MkdirAll(filepath.Dir(workDir), 0755); err != nil {
 				return "", "", err
 			}
-			cmd := exec.CommandContext(ctx, "git", "clone", repoURL, workDir)
+			args := []string{"clone", repoURL, workDir}
+			if i.cfg.Install.DefaultBranch != "" {
+				args = []string{"clone", "-b", i.cfg.Install.DefaultBranch, repoURL, workDir}
+			}
+			cmd := exec.CommandContext(ctx, "git", args...)
 			if err := cmd.Run(); err != nil {
 				return "", "", fmt.Errorf("git clone failed: %w", err)
 			}
@@ -210,11 +390,14 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 				return "", "", fmt.Errorf("git fetch failed: %w", err)
 			}
 
-			// Detect default branch if not specified
-			branch := "master"
-			checkMain := exec.CommandContext(ctx, "git", "-C", workDir, "show-ref", "--verify", "refs/remotes/origin/main")
-			if err := checkMain.Run(); err == nil {
-				branch = "main"
+			// Detect branch: use config, then version, then default
+			branch := i.cfg.Install.DefaultBranch
+			if branch == "" {
+				branch = "master"
+				checkMain := exec.CommandContext(ctx, "git", "-C", workDir, "show-ref", "--verify", "refs/remotes/origin/main")
+				if err := checkMain.Run(); err == nil {
+					branch = "main"
+				}
 			}
 
 			resetCmd := exec.CommandContext(ctx, "git", "-C", workDir, "reset", "--hard", "origin/"+branch)
@@ -480,28 +663,27 @@ func (i *Ingestor) downloadAndUnzip(ctx context.Context, url, dest string) error
 
 func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, string, string, error) {
 	originalURL := repoURL
-	repoURL = normalizeRepoURL(repoURL)
+	repoURL, version := i.ParseVersion(normalizeRepoURL(repoURL))
 
 	// If it's a simple name, try to discover it
 	if !strings.Contains(originalURL, "/") && !strings.Contains(originalURL, ".") && !strings.Contains(originalURL, ":") {
 		// 1. Check if it's an official package in the current source tree
-		// (This is mostly for development/testing)
-		officialPath := filepath.Join("packages", "official", originalURL, "anyisland.json")
+		officialPath := filepath.Join("packages", "official", repoURL, "anyisland.json")
 		if _, err := os.Stat(officialPath); err == nil {
 			repoURL, _ = filepath.Abs(filepath.Dir(officialPath))
 			fmt.Printf("Using official package manifest: %s\n", officialPath)
 		} else {
-			discovered, err := i.resolver.Resolve(ctx, originalURL)
+			discovered, err := i.resolver.Resolve(ctx, repoURL)
 			if err == nil && discovered != "" {
 				repoURL = normalizeRepoURL(discovered)
 			} else {
 				// Final fallback to AI if resolver fails
-				fmt.Printf("Deep searching for tool: %s...\n", originalURL)
-				discovered, err := i.agent.DiscoverTool(ctx, originalURL)
+				fmt.Printf("Deep searching for tool: %s...\n", repoURL)
+				discovered, err := i.agent.DiscoverTool(ctx, repoURL)
 				if err == nil && discovered != "" && discovered != "NONE" {
 					repoURL = normalizeRepoURL(discovered)
 				} else {
-					return nil, "", "", fmt.Errorf("could not find a repository for '%s'", originalURL)
+					return nil, "", "", fmt.Errorf("could not find a repository for '%s'", repoURL)
 				}
 			}
 		}
@@ -520,6 +702,9 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		if _, err := os.Stat(manifestPath); err == nil {
 			m, err := LoadManifest(manifestPath)
 			if err == nil {
+				if version != "" {
+					m.Version = version
+				}
 				return m, commit, finalURL, nil
 			}
 		}
@@ -545,30 +730,64 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		owner = parts[0]
 		repo = parts[1]
 
+		// Smart Discovery: Check for Releases first if preference is binary
+		if cfg.Install.Preference != "source" {
+			release, err := i.DiscoverRelease(ctx, owner, repo, version)
+			if err == nil && release != nil {
+				asset := i.MatchAsset(release.Assets)
+				if asset != nil {
+					fmt.Printf("✨ Found binary release: %s (%s)\n", release.GetTagName(), asset.GetName())
+					return &Manifest{
+						Name:    repo,
+						Version: release.GetTagName(),
+						Release: &ReleaseInfo{
+							TagName:     release.GetTagName(),
+							AssetURL:    asset.GetBrowserDownloadURL(),
+							AssetName:   asset.GetName(),
+							IsBinary:    true,
+							PublishedAt: release.GetPublishedAt().String(),
+						},
+					}, commit, finalURL, nil
+				}
+			}
+		}
+
 		ghRepo, _, err := i.gh.Repositories.Get(ctx, owner, repo)
 		defaultBranch := "main"
 		if err == nil && ghRepo != nil {
 			defaultBranch = ghRepo.GetDefaultBranch()
 		}
 
-		rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/anyisland.json", owner, repo, defaultBranch)
+		// Respect pinned branch if any
+		targetRef := defaultBranch
+		if cfg.Install.DefaultBranch != "" {
+			targetRef = cfg.Install.DefaultBranch
+		}
+		if version != "" {
+			targetRef = version // Use version as branch/tag if specified
+		}
+
+		rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/anyisland.json", owner, repo, targetRef)
 		curlCmd := exec.CommandContext(ctx, "curl", "-fsSL", rawURL)
 		output, err := curlCmd.Output()
 		if err == nil {
 			var m Manifest
 			if err := json.Unmarshal(output, &m); err == nil {
+				if version != "" {
+					m.Version = version
+				}
 				return &m, commit, finalURL, nil
 			}
 		}
 
-		tree, _, err := i.gh.Git.GetTree(ctx, owner, repo, defaultBranch, true)
+		tree, _, err := i.gh.Git.GetTree(ctx, owner, repo, targetRef, true)
 		if err == nil && tree != nil {
 			for _, entry := range tree.Entries {
 				files = append(files, entry.GetPath())
 			}
 		}
 
-		readme, _, err := i.gh.Repositories.GetReadme(ctx, owner, repo, nil)
+		readme, _, err := i.gh.Repositories.GetReadme(ctx, owner, repo, &github.RepositoryContentGetOptions{Ref: targetRef})
 		if err == nil && readme != nil {
 			content, _ := readme.GetContent()
 			readmeContent = content

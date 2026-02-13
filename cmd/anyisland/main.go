@@ -79,13 +79,19 @@ import (
 		                                        key := args[0]
 		                                        val := args[1]
 		                
-		                                        switch key {
-		                                        case "update.auto_update":
-		                                                cfg.Update.AutoUpdate = (val == "true")
-		                                        default:
-		                                                return fmt.Errorf("unknown config key: %s", key)
-		                                        }
-		                
+		                                                                                                switch key {
+		                                                                                                case "update.auto_update":
+		                                                                                                        cfg.Update.AutoUpdate = (val == "true")
+		                                                                                                case "install.preference":
+		                                                                                                        if val != "binary" && val != "source" {
+		                                                                                                                return fmt.Errorf("invalid preference: %s (must be 'binary' or 'source')", val)
+		                                                                                                        }
+		                                                                                                        cfg.Install.Preference = val
+		                                                                                                case "install.default_branch":
+		                                                                                                        cfg.Install.DefaultBranch = val
+		                                                                                                default:
+		                                                                                                        return fmt.Errorf("unknown config key: %s", key)
+		                                                                                                }		                
 		                                        if err := cm.Save(cfg); err != nil {
 		                                                return err
 		                                        }
@@ -108,10 +114,11 @@ import (
 		                                                return err
 		                                        }
 		                
-		                                        fmt.Println("Anyisland Configuration:")
-		                                        fmt.Printf("  update.auto_update: %v\n", cfg.Update.AutoUpdate)
-		                                        return nil
-		                                },
+		                                                                                                fmt.Println("Anyisland Configuration:")
+		                                                                                                fmt.Printf("  update.auto_update:      %v\n", cfg.Update.AutoUpdate)
+		                                                                                                fmt.Printf("  install.preference:      %s\n", cfg.Install.Preference)
+		                                                                                                fmt.Printf("  install.default_branch:  %s\n", cfg.Install.DefaultBranch)
+		                                                                                                return nil		                                },
 		                        }
 		                
 
@@ -273,19 +280,23 @@ import (
 	                        if sourceFlag != "" {
 	                                url = sourceFlag
 	                        }
-	                        if url == "" {
-	                                return fmt.Errorf("must provide a URL, a tool name, or use --source")
-	                        }
-	
-	                        sys, err := pal.New()
-	                        if err != nil {
-	                                return err
-	                        }
-	
-	                        ag := getSynthesizer()
-	                        ingestor := cli.NewIngestor(ag, sys)
-	
-	                        fmt.Printf("Resolving dependencies for %s...\n", url)
+	                                                        if url == "" {
+	                                                                return fmt.Errorf("must provide a URL, a tool name, or use --source")
+	                                                        }
+	                        
+	                                                                                        sys, err := pal.New()
+	                                                                                        if err != nil {
+	                                                                                                return err
+	                                                                                        }
+	                                                        
+	                                                                                        cm := cli.NewConfigManager(sys)
+	                                                                                        cfg, _ := cm.Load()
+	                                                                                        if sourceFlag != "" {
+	                                                                                                cfg.Install.Preference = "source"
+	                                                                                        }
+	                                                        
+	                                                                                        ag := getSynthesizer()
+	                                                                                        ingestor := cli.NewIngestor(ag, sys, cfg)	                        fmt.Printf("Resolving dependencies for %s...\n", url)
 	                        resolved, err := ingestor.ResolveDependencies(cmd.Context(), url)
 	                        if err != nil {
 	                                return err

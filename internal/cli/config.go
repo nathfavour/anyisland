@@ -12,6 +12,10 @@ type Config struct {
 	Update struct {
 		AutoUpdate bool `json:"auto_update"`
 	} `json:"update"`
+	Install struct {
+		Preference    string `json:"preference"`     // "binary" or "source"
+		DefaultBranch string `json:"default_branch"` // e.g. "main", "master", or empty for repo default
+	} `json:"install"`
 }
 
 type ConfigManager struct {
@@ -32,6 +36,8 @@ func (cm *ConfigManager) Load() (*Config, error) {
 		// Return default config
 		cfg := &Config{}
 		cfg.Update.AutoUpdate = true
+		cfg.Install.Preference = "binary" // Default to binary for speed
+		cfg.Install.DefaultBranch = ""     // Default to repo's default branch
 		return cfg, nil
 	}
 

@@ -155,7 +155,7 @@ func (m *LifecycleManager) HealTool(ctx context.Context, ag agent.Synthesizer, t
 		return fmt.Errorf("tool %s not found in registry", toolName)
 	}
 
-	ingestor := NewIngestor(ag, m.sys)
+	ingestor := NewIngestor(ag, m.sys, nil)
 	isBroken := false
 	reason := ""
 
@@ -267,7 +267,7 @@ func (m *LifecycleManager) HotSwap(targetPath string, extraEnv ...string) error 
 }
 
 func (m *LifecycleManager) CheckAnyislandUpdate(ctx context.Context, ag agent.Synthesizer) (string, bool, error) {
-	ingestor := NewIngestor(ag, m.sys)
+	ingestor := NewIngestor(ag, m.sys, nil)
 	repoURL := "https://github.com/nathfavour/anyisland"
 	
 	latestCommit, err := ingestor.DiscoverLatestCommit(ctx, repoURL)
@@ -310,7 +310,7 @@ func (m *LifecycleManager) BackgroundAutoUpdate(ctx context.Context, ag agent.Sy
 	fmt.Printf("🚀 New version found (%s). Auto-updating Anyisland...\n", ShortCommit(latest))
 
 	// 3. Silent update
-	ingestor := NewIngestor(ag, m.sys)
+	ingestor := NewIngestor(ag, m.sys, nil)
 	manifest, _, _, err := ingestor.Ingest(ctx, "https://github.com/nathfavour/anyisland")
 	if err != nil {
 		fmt.Printf("⚠️ Auto-update ingestion failed: %v\n", err)

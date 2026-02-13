@@ -14,6 +14,14 @@ type RuntimeConfig struct {
 	UpdateCommand  string `json:"update_command,omitempty"`  // Custom command to update the tool
 }
 
+type ReleaseInfo struct {
+	TagName     string `json:"tag_name,omitempty"`
+	AssetURL    string `json:"asset_url,omitempty"`
+	AssetName   string `json:"asset_name,omitempty"`
+	IsBinary    bool   `json:"is_binary,omitempty"`
+	PublishedAt string `json:"published_at,omitempty"`
+}
+
 type Manifest struct {
 	Name         string          `json:"name"`
 	Version      string          `json:"version"`
@@ -24,6 +32,7 @@ type Manifest struct {
 	InstallDir   string          `json:"install_dir,omitempty"` // Root-level override for installation path
 	Build        agent.BuildPlan `json:"build"`
 	Runtime      *RuntimeConfig  `json:"runtime,omitempty"`
+	Release      *ReleaseInfo    `json:"release,omitempty"` // Metadata if installed from a release
 }
 
 func LoadManifest(path string) (*Manifest, error) {
