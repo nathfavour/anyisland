@@ -618,23 +618,61 @@ var (
 					fmt.Printf("  - %s\n", step)
 				}
 
-				fmt.Println("Executing build...")
-				hash, installPath, err := ingestor.Build(cmd.Context(), manifest, source)
-				if err != nil {
-					return err
-				}
+				                                fmt.Println("Executing build...")
 
-				err = reg.RegisterTool(registry.Tool{
-					Name:         manifest.Name,
-					Source:       source,
-					SourceDir:    manifest.SourceDir,
-					Version:      manifest.Version,
-					LastCommit:   commit,
-					BinaryHash:   hash,
-					InstallPath:  installPath,
-					Type:         "source",
-					Dependencies: manifest.Dependencies,
-				})
+				                                hash, installPath, err := ingestor.Build(cmd.Context(), manifest, source)
+
+				                                if err != nil {
+
+				                                      return err
+
+				                                }
+
+				
+
+				                                absSourceDir := ingestor.GetSourcePath(source, manifest.Name)
+
+				                                if manifest.SourceDir != "" {
+
+				                                      customDir := cli.ExpandPath(manifest.SourceDir)
+
+				                                      if filepath.IsAbs(customDir) {
+
+				                                      absSourceDir = customDir
+
+				                                      } else {
+
+				                                      absSourceDir = filepath.Join(absSourceDir, customDir)
+
+				                                      }
+
+				                                }
+
+				
+
+				                                err = reg.RegisterTool(registry.Tool{
+
+				                                      Name:         manifest.Name,
+
+				                                      Source:       source,
+
+				                                      SourceDir:    absSourceDir,
+
+				                                      Version:      manifest.Version,
+
+				                                      LastCommit:   commit,
+
+				                                      BinaryHash:   hash,
+
+				                                      InstallPath:  installPath,
+
+				                                      Type:         "source",
+
+				                                      Dependencies: manifest.Dependencies,
+
+				                                })
+
+				
 				if err != nil {
 					return err
 				}
