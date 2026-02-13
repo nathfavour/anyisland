@@ -676,6 +676,10 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		}
 
 		repo = filepath.Base(absPath)
+		if manifest != nil && manifest.Name != "" {
+			repo = manifest.Name
+		}
+
 		if manifest == nil {
 			filepath.Walk(absPath, func(path string, info os.FileInfo, err error) error {
 				if err != nil || (info.IsDir() && info.Name() == ".git") {
