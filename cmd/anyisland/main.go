@@ -684,14 +684,19 @@ import (
 	                                        if url == "" {
 	                                                return fmt.Errorf("must provide a URL or use --source")
 	                                        }
-	                                        sys, err := pal.New()
-	                                        if err != nil {
-	                                                return err
-	                                        }
-	                
-	                                        ag := getSynthesizer()
-	                                        ingestor := cli.NewIngestor(ag, sys)
-	                
+	                                                                                        sys, err := pal.New()
+	                                                                                        if err != nil {
+	                                                                                                return err
+	                                                                                        }
+	                                                                
+	                                                                                        cm := cli.NewConfigManager(sys)
+	                                                                                        cfg, _ := cm.Load()
+	                                                                                        if sourceFlag != "" {
+	                                                                                                cfg.Install.Preference = "source"
+	                                                                                        }
+	                                        
+	                                                                                        ag := getSynthesizer()
+	                                                                                        ingestor := cli.NewIngestor(ag, sys, cfg)	                
 	                                        fmt.Printf("Resolving dependencies for %s...\n", url)
 	                                        resolved, err := ingestor.ResolveDependencies(cmd.Context(), url)
 	                                        if err != nil {
