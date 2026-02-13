@@ -91,10 +91,11 @@ func (m *LifecycleManager) SelfInstall() error {
 	reg, err := registry.Open(m.sys.GetIslandDir())
 	if err == nil {
 		defer reg.Close()
+		absPWD, _ := filepath.Abs(".")
 		reg.RegisterTool(registry.Tool{
 			Name:        "anyisland",
 			Source:      "https://github.com/nathfavour/anyisland",
-			SourceDir:   os.Getenv("PWD"), // Assume current dir for self-install
+			SourceDir:   absPWD, // Use absolute path for self-install
 			Version:     Version,
 			LastCommit:  Commit,
 			InstallPath: targetPath,
