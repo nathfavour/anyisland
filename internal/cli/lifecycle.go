@@ -175,7 +175,7 @@ func (m *LifecycleManager) HealTool(ctx context.Context, ag agent.Synthesizer, t
 	if sourceDir == "" {
 		sourceDir = ingestor.GetSourcePath(t.Source, t.Name)
 	} else {
-		sourceDir = ingestor.expandPath(sourceDir)
+		sourceDir = ingestor.ExpandPath(sourceDir)
 	}
 
 	if t.Type == "source" {

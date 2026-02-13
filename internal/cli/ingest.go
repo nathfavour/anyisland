@@ -297,7 +297,7 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 	workDir := i.GetSourcePath(repoURL, m.Name)
 
 	if m.SourceDir != "" {
-		customDir := i.expandPath(m.SourceDir)
+		customDir := i.ExpandPath(m.SourceDir)
 		if filepath.IsAbs(customDir) {
 			workDir = customDir
 		} else {
@@ -477,7 +477,7 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 			targetDir = i.sys.GetBinDir()
 		}
 	}
-	targetDir = i.expandPath(targetDir)
+	targetDir = i.ExpandPath(targetDir)
 
 	if plan.Toolchain == "flutter" {
 		appDir := filepath.Join(targetDir, m.Name+"-app")
@@ -840,7 +840,7 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 }
 
 func normalizeRepoURL(url string) string {
-	url = expandPath(url)
+	url = ExpandPath(url)
 	if !strings.HasPrefix(url, "http") && !strings.HasPrefix(url, "git@") {
 		// Only check if it's a local path if it starts with . or /
 		if strings.HasPrefix(url, ".") || strings.HasPrefix(url, "/") {
@@ -864,7 +864,7 @@ func normalizeRepoURL(url string) string {
 	return url
 }
 
-func (i *Ingestor) expandPath(path string) string {
+func (i *Ingestor) ExpandPath(path string) string {
 	return ExpandPath(path)
 }
 

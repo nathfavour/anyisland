@@ -1171,24 +1171,34 @@ var (
 						fmt.Printf("Installing new dependency: %s\n", manifest.Name)
 					}
 
-					hash, installPath, err := ingestor.Build(cmd.Context(), manifest, pkgSource)
-					if err != nil {
-						fmt.Printf("Error building %s: %v\n", manifest.Name, err)
-						continue
-					}
-
-					reg.RegisterTool(registry.Tool{
-						Name:         manifest.Name,
-						Source:       pkgSource,
-						Version:      manifest.Version,
-						LastCommit:   commit,
-						BinaryHash:   hash,
-						InstallPath:  installPath,
-						Type:         "source",
-						Dependencies: manifest.Dependencies,
-					})
-
-					if manifest.Name == t.Name {
+					                                      hash, installPath, err := ingestor.Build(cmd.Context(), manifest, pkgSource)
+					                                      if err != nil {
+					                                      fmt.Printf("Error building %s: %v\n", manifest.Name, err)
+					                                      continue
+					                                      }
+					
+					                                      absSourceDir := ingestor.GetSourcePath(pkgSource, manifest.Name)
+					                                      if manifest.SourceDir != "" {
+					                                      customDir := cli.ExpandPath(manifest.SourceDir)
+					                                      if filepath.IsAbs(customDir) {
+					                                      absSourceDir = customDir
+					                                      } else {
+					                                      absSourceDir = filepath.Join(absSourceDir, customDir)
+					                                      }
+					                                      }
+					
+					                                      reg.RegisterTool(registry.Tool{
+					                                      Name:         manifest.Name,
+					                                      Source:       pkgSource,
+					                                      SourceDir:    absSourceDir,
+					                                      Version:      manifest.Version,
+					                                      LastCommit:   commit,
+					                                      BinaryHash:   hash,
+					                                      InstallPath:  installPath,
+					                                      Type:         "source",
+					                                      Dependencies: manifest.Dependencies,
+					                                      })
+										if manifest.Name == t.Name {
 						fmt.Printf("%s updated successfully!\n", t.Name)
 					} else {
 						fmt.Printf("Dependency %s updated/installed successfully!\n", manifest.Name)
