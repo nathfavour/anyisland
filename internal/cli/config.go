@@ -51,6 +51,11 @@ func (cm *ConfigManager) Load() (*Config, error) {
 		return nil, err
 	}
 
+	// Apply defaults for missing fields
+	if cfg.Install.Preference == "" {
+		cfg.Install.Preference = "binary"
+	}
+
 	return &cfg, nil
 }
 
