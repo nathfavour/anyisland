@@ -865,10 +865,10 @@ func normalizeRepoURL(url string) string {
 }
 
 func (i *Ingestor) expandPath(path string) string {
-	return expandPath(path)
+	return ExpandPath(path)
 }
 
-func expandPath(path string) string {
+func ExpandPath(path string) string {
 	if strings.HasPrefix(path, "~/") {
 		home, _ := os.UserHomeDir()
 		return filepath.Join(home, path[2:])

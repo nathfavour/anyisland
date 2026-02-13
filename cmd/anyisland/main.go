@@ -344,67 +344,49 @@ var (
 					return err
 				}
 
-				                                absSourceDir := ""
+				                                                                absSourceDir := ingestor.GetSourcePath(source, manifest.Name)
 
-				                                if manifest.SourceDir != "" {
+				                                                                if manifest.SourceDir != "" {
 
-				                                      absSourceDir, _ = filepath.Abs(manifest.SourceDir)
+				                                                                      customDir := cli.ExpandPath(manifest.SourceDir)
 
-				                                } else {
+				                                                                      if filepath.IsAbs(customDir) {
 
-				                                      absSourceDir = installPath // Fallback if needed, though Build might handle it
+				                                                                      absSourceDir = customDir
 
-				                                }
+				                                                                      } else {
 
-				                                // Correct way: if it's source, we know where we built it
+				                                                                      absSourceDir = filepath.Join(absSourceDir, customDir)
 
-				                                absSourceDir = filepath.Dir(installPath) // This is not quite right as installPath is bin dir
+				                                                                      }
 
-				
+				                                                                }
 
-				                                // Let's use what Ingestor uses
+				                                
 
-				                                absSourceDir = ingestor.getSourcePath(source, manifest.Name)
+				                                                                err = reg.RegisterTool(registry.Tool{
 
-				                                if manifest.SourceDir != "" {
+				                                                                      Name:         manifest.Name,
 
-				                                      customDir := cli.ExpandPath(manifest.SourceDir)
+				                                                                      Source:       source,
 
-				                                      if filepath.IsAbs(customDir) {
+				                                                                      SourceDir:    absSourceDir,
 
-				                                      absSourceDir = customDir
+				                                                                      Version:      manifest.Version,
 
-				                                      } else {
+				                                                                      LastCommit:   commit,
 
-				                                      absSourceDir = filepath.Join(absSourceDir, customDir)
+				                                                                      BinaryHash:   hash,
 
-				                                      }
+				                                                                      InstallPath:  installPath,
 
-				                                }
+				                                                                      Type:         "source",
 
-				
+				                                                                      Dependencies: manifest.Dependencies,
 
-				                                err = reg.RegisterTool(registry.Tool{
+				                                                                })
 
-				                                      Name:         manifest.Name,
-
-				                                      Source:       source,
-
-				                                      SourceDir:    absSourceDir,
-
-				                                      Version:      manifest.Version,
-
-				                                      LastCommit:   commit,
-
-				                                      BinaryHash:   hash,
-
-				                                      InstallPath:  installPath,
-
-				                                      Type:         "source",
-
-				                                      Dependencies: manifest.Dependencies,
-
-				                                })
+				                                
 
 				
 				if err != nil {
