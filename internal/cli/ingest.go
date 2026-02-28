@@ -708,23 +708,17 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		owner = parts[0]
 		repo = parts[1]
 
-		ghRepo, _, err := i.gh.Repositories.Get(ctx, owner, repo)
-		defaultBranch := "main"
-		if err == nil && ghRepo != nil {
-			defaultBranch = ghRepo.GetDefaultBranch()
-		}
+                // Smarter Branch Discovery
+                targetRef := version
+                if targetRef == "" {
+                        targetRef = i.cfg.Install.DefaultBranch
+                }
+                if targetRef == "" {
+                        targetRef = i.DiscoverDefaultBranch(ctx, repoURL)
+                }
 
-		// Respect pinned branch if any
-		targetRef := defaultBranch
-		if i.cfg.Install.DefaultBranch != "" {
-			targetRef = i.cfg.Install.DefaultBranch
-		}
-		if version != "" {
-			targetRef = version // Use version as branch/tag if specified
-		}
-
-		// Try to load anyisland.json first
-		rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/anyisland.json", owner, repo, targetRef)
+                // Try to load anyisland.json first
+                rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/anyisland.json", owner, repo, targetRef)
 		curlCmd := exec.CommandContext(ctx, "curl", "-fsSL", rawURL)
 		output, err := curlCmd.Output()
 		if err == nil {
@@ -837,6 +831,25 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 	}
 
 	return manifest, commit, finalURL, nil
+}
+
+
+func (i *Ingestor) DiscoverDefaultBranch(ctx context.Context, repoURL string) string {
+	// 1. Try Git discovery (works for any provider, no API token needed)
+	cmd := exec.CommandContext(ctx, "git", "ls-remote", "--symref", repoURL, "HEAD")
+	output, err := cmd.Output()
+	if err == nil {
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			if strings.HasPrefix(line, "ref: refs/heads/") {
+				parts := strings.Fields(line)
+				return strings.TrimPrefix(parts[1], "refs/heads/")
+			}
+		}
+	}
+
+	// 2. Fallback to common branch names
+	return "main"
 }
 
 func normalizeRepoURL(url string) string {
