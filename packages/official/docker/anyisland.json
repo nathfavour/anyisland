@@ -1,0 +1,13 @@
+{
+  "name": "docker",
+  "version": "latest",
+  "description": "Docker CLI",
+  "build": {
+    "toolchain": "shell",
+    "steps": [
+      "ARCH=$(uname -m); if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"x86_64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"aarch64\"; fi; curl -fsSL \"https://download.docker.com/linux/static/stable/$ARCH/docker-25.0.3.tgz\" -o docker.tgz",
+      "tar -xzf docker.tgz"
+    ],
+    "bin": "docker/docker"
+  }
+}

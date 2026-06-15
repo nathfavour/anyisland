@@ -1,0 +1,13 @@
+{
+  "name": "git",
+  "version": "latest",
+  "description": "Git version control",
+  "build": {
+    "toolchain": "shell",
+    "steps": [
+      "curl -fsSL https://github.com/jzelinskie/git-static/releases/download/v2.39.2/git-linux-amd64 -o git",
+      "chmod +x git"
+    ],
+    "bin": "git"
+  }
+}

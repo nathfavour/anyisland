@@ -1,0 +1,20 @@
+{
+  "name": "python",
+  "version": "3.11",
+  "description": "Python runtime (via micromamba)",
+  "aliases": ["pip"],
+  "build": {
+    "toolchain": "shell",
+    "steps": [
+      "curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba",
+      "./bin/micromamba create -y -p ./venv python=3.11 pip",
+      "mkdir -p bin",
+      "echo '#!/bin/bash' > bin/python",
+      "echo 'exec '$(pwd)'/venv/bin/python3 \"$@\"' >> bin/python",
+      "echo '#!/bin/bash' > bin/pip",
+      "echo 'exec '$(pwd)'/venv/bin/pip \"$@\"' >> bin/pip",
+      "chmod +x bin/python bin/pip"
+    ],
+    "bin": "bin/python"
+  }
+}

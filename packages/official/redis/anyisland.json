@@ -1,0 +1,15 @@
+{
+  "name": "redis",
+  "version": "latest",
+  "description": "Redis in-memory store",
+  "aliases": ["redis-cli"],
+  "build": {
+    "toolchain": "shell",
+    "steps": [
+      "curl -fsSL https://download.redis.io/redis-stable.tar.gz -o redis.tar.gz",
+      "tar -xzf redis.tar.gz",
+      "cd redis-stable && make"
+    ],
+    "bin": "redis-stable/src/redis-server"
+  }
+}

@@ -402,6 +402,17 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 		}
 		fmt.Printf("Executing: %s\n", step)
 		fullArgs := strings.Fields(step)
+                if plan.Toolchain == "shell" {
+                        buildCmd := exec.CommandContext(ctx, "bash", "-c", step)
+                        buildCmd.Dir = workDir
+                        var combinedOutput strings.Builder
+                        buildCmd.Stdout = io.MultiWriter(os.Stdout, &combinedOutput)
+                        buildCmd.Stderr = io.MultiWriter(os.Stderr, &combinedOutput)
+                        if err := buildCmd.Run(); err != nil {
+                                return "", "", fmt.Errorf("shell step failed: %w", err)
+                        }
+                        continue
+                }
 		if len(fullArgs) == 0 {
 			continue
 		}

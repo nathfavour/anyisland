@@ -1,0 +1,13 @@
+{
+  "name": "go",
+  "version": "latest",
+  "description": "The Go programming language",
+  "build": {
+    "toolchain": "shell",
+    "steps": [
+      "OS=$(uname -s | tr '[:upper:]' '[:lower:]'); ARCH=$(uname -m); if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi; curl -fsSL \"https://go.dev/dl/go1.22.1.$OS-$ARCH.tar.gz\" -o go.tar.gz",
+      "tar -xzf go.tar.gz"
+    ],
+    "bin": "go/bin/go"
+  }
+}

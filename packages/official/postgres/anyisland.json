@@ -1,0 +1,16 @@
+{
+  "name": "postgres",
+  "version": "latest",
+  "description": "Postgres client tools (psql via Docker wrapper)",
+  "aliases": ["psql"],
+  "build": {
+    "toolchain": "shell",
+    "steps": [
+      "mkdir -p bin",
+      "echo '#!/bin/bash' > bin/psql",
+      "echo 'docker run -it --rm postgres:alpine psql \"$@\"' >> bin/psql",
+      "chmod +x bin/psql"
+    ],
+    "bin": "bin/psql"
+  }
+}

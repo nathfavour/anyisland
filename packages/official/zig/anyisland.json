@@ -1,0 +1,14 @@
+{
+  "name": "zig",
+  "version": "latest",
+  "description": "Zig programming language",
+  "build": {
+    "toolchain": "shell",
+    "steps": [
+      "OS=$(uname -s | tr '[:upper:]' '[:lower:]'); ARCH=$(uname -m); if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"x86_64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"aarch64\"; fi; if [ \"$OS\" = \"darwin\" ]; then OS=\"macos\"; else OS=\"linux\"; fi; curl -fsSL \"https://ziglang.org/download/0.11.0/zig-$OS-$ARCH-0.11.0.tar.xz\" -o zig.tar.xz",
+      "tar -xf zig.tar.xz",
+      "mv zig-$OS-$ARCH-0.11.0 zig_dir"
+    ],
+    "bin": "zig_dir/zig"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "node",
+  "version": "latest",
+  "description": "Node.js JavaScript runtime (Standalone)",
+  "build": {
+    "toolchain": "shell",
+    "steps": [
+      "OS=$(uname -s | tr '[:upper:]' '[:lower:]'); ARCH=$(uname -m); if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"x64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi; if [ \"$OS\" = \"darwin\" ]; then OS=\"darwin\"; else OS=\"linux\"; fi; curl -fsSL \"https://nodejs.org/dist/v20.11.1/node-v20.11.1-$OS-$ARCH.tar.gz\" -o node.tar.gz",
+      "tar -xzf node.tar.gz",
+      "mv node-v20.11.1-$OS-$ARCH node_dir"
+    ],
+    "bin": "node_dir/bin/node",
+    "aliases": ["npm", "npx"]
+  }
+}
