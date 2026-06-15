@@ -35,26 +35,33 @@ if command -v anyisland &> /dev/null; then
     fi
 fi
 
-# 3. Check for Go (Fallback)
-if ! command -v go &> /dev/null; then
-    echo "⚠️  Go not found. In a full release, I would download a pre-built binary for $OS-$ARCH."
-    echo "🔨 For now, please ensure Go is installed if you want to build from source."
-    # exit 1 # In real release, we would download here
-fi
-
 # 3. Build/Download Binary
 if command -v go &> /dev/null; then
     echo "🔨 Building Anyisland from source..."
-    go build -o anyisland ./cmd/anyisland
+    if ! go build -o anyisland ./cmd/anyisland; then
+        echo "⚠️  Build failed, attempting to download pre-built binary..."
+        curl -fsSL "https://github.com/nathfavour/anyisland/releases/latest/download/anyisland_${OS}_${ARCH}.tar.gz" -o anyisland.tar.gz || {
+            echo "❌ Failed to download pre-built binary. Exiting."
+            exit 1
+        }
+        tar -xzf anyisland.tar.gz anyisland || unzip anyisland.tar.gz anyisland.exe
+        rm -f anyisland.tar.gz
+    fi
 else
-    # This is where we would curl the binary
-    # curl -L https://github.com/nathfavour/anyisland/releases/latest/download/anyisland-$OS-$ARCH -o anyisland
-    echo "Error: Binary download not yet implemented in this prototype. Please install Go."
-    exit 1
+    echo "⚠️  Go not found. Downloading pre-built binary for $OS-$ARCH..."
+    curl -fsSL "https://github.com/nathfavour/anyisland/releases/latest/download/anyisland_${OS}_${ARCH}.tar.gz" -o anyisland.tar.gz || {
+        echo "❌ Failed to download pre-built binary. Exiting."
+        exit 1
+    }
+    tar -xzf anyisland.tar.gz anyisland || unzip anyisland.tar.gz anyisland.exe
+    rm -f anyisland.tar.gz
 fi
 
 # 4. Hand-off to Anyisland for self-installation
 echo "🚚 Handing off to Anyisland for system integration..."
+if [ -f "anyisland.exe" ]; then
+    mv anyisland.exe anyisland
+fi
 chmod +x anyisland
 mkdir -p "$LOCAL_BIN"
 mv anyisland "$LOCAL_BIN/"
