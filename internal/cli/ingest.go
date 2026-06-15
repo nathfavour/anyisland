@@ -355,7 +355,7 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 				branch = "master"
 				checkMain := exec.CommandContext(ctx, "git", "-C", workDir, "show-ref", "--verify", "refs/remotes/origin/main")
 				if err := checkMain.Run(); err == nil {
-					branch = "main"
+					branch = "master"
 				}
 			}
 
