@@ -763,6 +763,18 @@ var (
 					}
 				}
 
+                                // 2.5 Remove source directory if requested
+                                removeSource, _ := cmd.Flags().GetBool("remove-source")
+                                if removeSource && tool.SourceDir != "" {
+                                    if _, err := os.Stat(tool.SourceDir); err == nil {
+                                        if err := os.RemoveAll(tool.SourceDir); err != nil {
+                                            fmt.Printf("Warning: failed to remove source directory: %v\n", err)
+                                        } else {
+                                            fmt.Printf("Removed source directory: %s\n", tool.SourceDir)
+                                        }
+                                    }
+                                }
+
 				// 3. Remove from registry
 				if err := reg.RemoveTool(toolName); err != nil {
 					return err
@@ -1230,6 +1242,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&sourceFlag, "source", "s", "", "Override source URL or local path")
 
 	uninstallCmd.Flags().Bool("clean", false, "Remove all data and configurations")
+        uninstallCmd.Flags().Bool("remove-source", false, "Remove the cached source code directory")
 
 	rootCmd.AddCommand(setupCmd)
 
