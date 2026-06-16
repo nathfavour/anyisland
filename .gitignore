@@ -16,3 +16,10 @@ pkg/
 # OS
 .DS_Store
 anyisland-test
+
+# Added by Autocommiter SECURE_MODE:
+packages/official/python/venv/lib/libcrypto.so.3
+packages/official/python/venv/lib/libpython3.11.so.1.0
+packages/official/python/venv/lib/python3.11/site-packages/pip/_vendor/certifi/cacert.pem
+packages/official/python/venv/ssl/cacert.pem
+packages/official/python/venv/ssl/cert.pem
