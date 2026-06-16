@@ -410,3 +410,8 @@ CRITICAL:
 	}
 	return strings.TrimSpace(resp), nil
 }
+
+func (v *VibeauraSynthesizer) AnalyzeConflict(ctx context.Context, binName, binOutput, newToolName, newToolDesc string) (string, error) {
+        prompt := fmt.Sprintf("You are analyzing a binary name clash for Anyisland.\nThe incoming tool is: %s (%s).\nHowever, the binary name '%s' already exists in the user's system.\nHere is the output of running the existing binary:\n%s\n\nIs this the same software? If not, what is the existing software? Give a very brief 1-line warning to the user.", newToolName, newToolDesc, binName, binOutput)
+        return v.query(ctx, prompt, "ask")
+}

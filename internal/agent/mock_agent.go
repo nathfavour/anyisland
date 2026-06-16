@@ -54,3 +54,8 @@ func (m *MockSynthesizer) SelectAsset(ctx context.Context, assets []string, goos
 	args := m.Called(ctx, assets, goos, goarch)
 	return args.String(0), args.Error(1)
 }
+
+func (m *MockSynthesizer) AnalyzeConflict(ctx context.Context, binName, binOutput, newToolName, newToolDesc string) (string, error) {
+        args := m.Called(ctx, binName, binOutput, newToolName, newToolDesc)
+        return args.String(0), args.Error(1)
+}

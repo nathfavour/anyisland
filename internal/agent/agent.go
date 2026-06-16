@@ -23,6 +23,7 @@ type Synthesizer interface {
 	DiscoverTool(ctx context.Context, query string) (string, error)
 	ExplainTool(ctx context.Context, name string, manifest interface{}, readme string) (string, error)
 	SelectAsset(ctx context.Context, assets []string, goos, goarch string) (string, error)
+        AnalyzeConflict(ctx context.Context, binName, binOutput, newToolName, newToolDesc string) (string, error)
 }
 
 type DiscretionResult struct {
@@ -103,4 +104,11 @@ func (m *HeuristicSynthesizer) ExplainTool(ctx context.Context, name string, man
 func (m *HeuristicSynthesizer) SelectAsset(ctx context.Context, assets []string, goos, goarch string) (string, error) {
 	// Heuristic fallback already tried its best, return empty to allow caller fallback.
 	return "", nil
+}
+
+func (m *HeuristicSynthesizer) AnalyzeConflict(ctx context.Context, binName, binOutput, newToolName, newToolDesc string) (string, error) {
+        if strings.Contains(strings.ToLower(binOutput), strings.ToLower(newToolName)) {
+                return "", nil
+        }
+        return fmt.Sprintf("Possible conflict detected for binary %s. The existing tool may be different from %s.", binName, newToolName), nil
 }
