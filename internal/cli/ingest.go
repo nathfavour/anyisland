@@ -330,10 +330,7 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 			if err := os.MkdirAll(filepath.Dir(workDir), 0755); err != nil {
 				return "", "", err
 			}
-			args := []string{"clone", repoURL, workDir}
-			if i.cfg.Install.DefaultBranch != "" {
-				args = []string{"clone", "-b", i.cfg.Install.DefaultBranch, repoURL, workDir}
-			}
+			args := i.cloneArgs(repoURL, workDir, m)
 			cmd := exec.CommandContext(ctx, "git", args...)
 			if err := cmd.Run(); err != nil {
 				return "", "", fmt.Errorf("git clone failed: %w", err)
@@ -593,6 +590,10 @@ func (i *Ingestor) Build(ctx context.Context, m *Manifest, repoURL string) (stri
 
 	// Clean up: Remove the original binary from the source directory to prevent bloat
 	_ = os.Remove(srcBin)
+
+	if err := i.buildSubmoduleTargets(ctx, workDir, m); err != nil {
+		return "", "", err
+	}
 
 	hash := calculateFileHash(dstBin)
 	return hash, dstBin, nil

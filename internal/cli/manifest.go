@@ -22,6 +22,11 @@ type ReleaseInfo struct {
 	PublishedAt string `json:"published_at,omitempty"`
 }
 
+type FeatureConfig struct {
+	TrackSubmodules  bool `json:"track_submodules,omitempty"`
+	RecursiveInstall bool `json:"recursive_install,omitempty"`
+}
+
 type Manifest struct {
 	Name         string          `json:"name"`
 	BinName      string          `json:"bin_name,omitempty"` // The actual binary name to be installed in PATH
@@ -35,6 +40,7 @@ type Manifest struct {
 	InstallDir   string          `json:"install_dir,omitempty"` // Root-level override for installation path
 	Build        agent.BuildPlan `json:"build"`
 	Runtime      *RuntimeConfig  `json:"runtime,omitempty"`
+	Features     *FeatureConfig  `json:"features,omitempty"`
 	Release      *ReleaseInfo    `json:"release,omitempty"` // Metadata if installed from a release
 }
 

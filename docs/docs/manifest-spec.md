@@ -44,6 +44,35 @@ The `anyisland.json` file is the primary configuration for Anyisland-aware tools
 | `install_dir` | `string` | No | Preferred installation path. Defaults to `~/.anyisland/bin/`. Can also be specified within the `build` object. |
 | `build` | `object` | **Yes** | Instructions on how to compile or prepare the tool's binary. |
 | `runtime` | `object` | No | Configuration for how the tool behaves on the host system. |
+| `features` | `object` | No | Advanced build capabilities for compound projects with Git submodules. |
+
+---
+
+### The `features` Object
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `track_submodules` | `boolean` | When true, Anyisland clones recursively and builds tracked submodule packages in parallel. |
+| `recursive_install` | `boolean` | When true with `track_submodules`, installs all generated submodule binaries into `~/.anyisland/bin/`. |
+
+#### Compound Project Example
+
+```json
+{
+  "name": "polygeist",
+  "version": "1.0.0",
+  "repository": "github.com/nathfavour/polygeist",
+  "build": {
+    "toolchain": "go",
+    "steps": ["go build -ldflags \"-s -w\" -o polygeist ./cmd/polygeist"],
+    "bin": "polygeist"
+  },
+  "features": {
+    "track_submodules": true,
+    "recursive_install": true
+  }
+}
+```
 
 ---
 
