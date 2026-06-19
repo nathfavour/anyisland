@@ -64,9 +64,9 @@ func buildPlanForGoModule(name, dir string) agent.BuildPlan {
 		outName = "vibeaura"
 	}
 	return agent.BuildPlan{
-		Steps:     []string{fmt.Sprintf("CGO_ENABLED=0 go build -ldflags \"-s -w\" -o %s %s", outName, target)},
+		Steps:     []string{fmt.Sprintf("CGO_ENABLED=0 go build -ldflags '-s -w' -o %s %s", outName, target)},
 		Bin:       outName,
-		Toolchain: "go",
+		Toolchain: "shell",
 	}
 }
 
@@ -171,20 +171,8 @@ func (i *Ingestor) buildSubmoduleTargets(ctx context.Context, workDir string, m 
 func (i *Ingestor) buildSubmoduleBinary(ctx context.Context, target submoduleTarget, binDir string) error {
 	plan := target.Manifest.Build
 	for _, step := range plan.Steps {
-		step = strings.TrimSpace(step)
-		if step == "" {
-			continue
-		}
-		args := strings.Fields(step)
-		if len(args) == 0 {
-			continue
-		}
-		cmd := exec.CommandContext(ctx, args[0], args[1:]...)
-		cmd.Dir = target.WorkDir
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("build step failed: %w", err)
+		if err := runBuildStep(ctx, target.WorkDir, step, plan.Toolchain); err != nil {
+			return err
 		}
 	}
 

@@ -8,7 +8,7 @@
     "toolchain": "shell",
     "steps": [
       "git submodule update --init --recursive",
-      "go build -ldflags \"-s -w\" -o polygeist ./cmd/polygeist"
+      "go build -ldflags '-s -w' -o polygeist ./cmd/polygeist"
     ],
     "bin": "polygeist"
   },
