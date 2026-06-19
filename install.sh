@@ -53,9 +53,15 @@ if [ "$BUILD_SUCCESS" != "true" ]; then
         EXT="zip"
     fi
     BINARY_NAME="anyisland_${OS}_${ARCH}.${EXT}"
-    DOWNLOAD_URL="https://github.com/nathfavour/anyisland/releases/latest/download/${BINARY_NAME}"
+    DOWNLOAD_URL="https://github.com/nathfavour/anyisland/releases/download/v0.0.0/${BINARY_NAME}"
     
-    if curl -fsSL "$DOWNLOAD_URL" -o anyisland_archive; then
+    if ! curl -fsSL "$DOWNLOAD_URL" -o anyisland_archive; then
+        echo "⚠️  v0.0.0 release not found. Falling back to latest release..."
+        DOWNLOAD_URL="https://github.com/nathfavour/anyisland/releases/latest/download/${BINARY_NAME}"
+        curl -fsSL "$DOWNLOAD_URL" -o anyisland_archive
+    fi
+    
+    if [ -f anyisland_archive ]; then
         echo "✅ Downloaded pre-built binary archive."
         if [ "$OS" = "windows" ]; then
             if command -v unzip &> /dev/null; then
