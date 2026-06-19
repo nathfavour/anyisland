@@ -3,6 +3,7 @@
 package pal
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"

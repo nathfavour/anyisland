@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/nathfavour/anyisland/internal/agent"
@@ -168,13 +167,6 @@ func (b *UpdateBroker) handleHandshake(conn net.Conn) BrokerResponse {
 	return BrokerResponse{Status: "UNMANAGED"}
 }
 
-func (b *UpdateBroker) getPeerPID(f *os.File) (int, error) {
-	ucred, err := syscall.GetsockoptUcred(int(f.Fd()), syscall.SOL_SOCKET, syscall.SO_PEERCRED)
-	if err != nil {
-		return 0, err
-	}
-	return int(ucred.Pid), nil
-}
 
 func (b *UpdateBroker) checkTool(name string) BrokerResponse {
 	tools, err := b.reg.ListTools()
