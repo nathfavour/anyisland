@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches:
-      - release
+      - master
     tags:
       - '*'
 
@@ -26,7 +26,7 @@ jobs:
           cache: true
 
       - name: Update rolling tag
-        if: github.ref == 'refs/heads/release'
+        if: github.ref == 'refs/heads/master'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
