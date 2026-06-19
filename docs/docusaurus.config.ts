@@ -38,7 +38,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           editUrl:
-            'https://github.com/nathfavour/anyisland/tree/main/docs/',
+            'https://github.com/nathfavour/anyisland/tree/master/docs/',
         },
         blog: false,
         theme: {
