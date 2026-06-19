@@ -12,6 +12,9 @@ echo "🏝️  Anyisland Bootstrap"
 
 # 1. Detect Platform
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+if [ "$OS" = "linux" ] && ( [ -d "/system/bin" ] || [ -n "$TERMUX_VERSION" ] ); then
+    OS="android"
+fi
 ARCH="$(uname -m)"
 case $ARCH in
     x86_64) ARCH="amd64" ;;
