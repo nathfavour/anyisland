@@ -11,7 +11,31 @@ permissions:
   contents: write
 
 jobs:
+  check-run:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            run.yes
+          sparse-checkout-cone-mode: false
+      - name: Check if run.yes exists
+        id: check
+        run: |
+          if [ -f "run.yes" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "✅ run.yes is present. Proceeding with release."
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "🚫 run.yes is not present. Skipping release."
+          fi
+
   goreleaser:
+    needs: check-run
+    if: needs.check-run.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
