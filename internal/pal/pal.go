@@ -3,6 +3,8 @@ package pal
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/nathfavour/anyisland/pkg/ipc"
 )
 
 // SecretStore defines operations for platform keyring access.
@@ -36,7 +38,7 @@ func (p *BasePAL) GetIslandDir() string {
 }
 
 func (p *BasePAL) GetSocketPath() string {
-	return filepath.Join(p.IslandDir, "anyisland.sock")
+	return ipc.SocketPath()
 }
 
 func (p *BasePAL) GetVisualDir() string {
