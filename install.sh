@@ -48,15 +48,28 @@ fi
 
 if [ "$BUILD_SUCCESS" != "true" ]; then
     echo "📥 Attempting to download pre-built binary for $OS-$ARCH..."
-    BINARY_NAME="anyisland-${OS}-${ARCH}"
+    EXT="tar.gz"
     if [ "$OS" = "windows" ]; then
-        BINARY_NAME="anyisland-${OS}-${ARCH}.exe"
+        EXT="zip"
     fi
-    
+    BINARY_NAME="anyisland_${OS}_${ARCH}.${EXT}"
     DOWNLOAD_URL="https://github.com/nathfavour/anyisland/releases/latest/download/${BINARY_NAME}"
     
-    if curl -fsSL "$DOWNLOAD_URL" -o anyisland; then
-        echo "✅ Downloaded pre-built binary."
+    if curl -fsSL "$DOWNLOAD_URL" -o anyisland_archive; then
+        echo "✅ Downloaded pre-built binary archive."
+        if [ "$OS" = "windows" ]; then
+            if command -v unzip &> /dev/null; then
+                unzip -o anyisland_archive anyisland.exe
+            else
+                echo "⚠️  unzip command not found. Cannot extract archive."
+                rm -f anyisland_archive
+                exit 1
+            fi
+            mv anyisland.exe anyisland
+        else
+            tar -xzf anyisland_archive anyisland
+        fi
+        rm -f anyisland_archive
         BUILD_SUCCESS=true
     else
         echo "⚠️  Failed to download pre-built binary."
