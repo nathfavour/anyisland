@@ -36,25 +36,46 @@ if command -v anyisland &> /dev/null; then
 fi
 
 # 3. Build/Download Binary
-if command -v go &> /dev/null; then
-    echo "🔨 Building Anyisland from source..."
-    if ! go build -o anyisland ./cmd/anyisland; then
-        echo "⚠️  Build failed, attempting to download pre-built binary..."
-        curl -fsSL "https://github.com/nathfavour/anyisland/releases/latest/download/anyisland_${OS}_${ARCH}.tar.gz" -o anyisland.tar.gz || {
-            echo "❌ Failed to download pre-built binary. Exiting."
-            exit 1
-        }
-        tar -xzf anyisland.tar.gz anyisland || unzip anyisland.tar.gz anyisland.exe
-        rm -f anyisland.tar.gz
+BUILD_SUCCESS=false
+
+# Check if we can build from local source (meaning we are running `./install.sh` inside the repo)
+if [ -d "cmd/anyisland" ] && command -v go &> /dev/null; then
+    echo "🔨 Building Anyisland from local source..."
+    if go build -o anyisland ./cmd/anyisland; then
+        BUILD_SUCCESS=true
     fi
-else
-    echo "⚠️  Go not found. Downloading pre-built binary for $OS-$ARCH..."
-    curl -fsSL "https://github.com/nathfavour/anyisland/releases/latest/download/anyisland_${OS}_${ARCH}.tar.gz" -o anyisland.tar.gz || {
-        echo "❌ Failed to download pre-built binary. Exiting."
-        exit 1
-    }
-    tar -xzf anyisland.tar.gz anyisland || unzip anyisland.tar.gz anyisland.exe
-    rm -f anyisland.tar.gz
+fi
+
+if [ "$BUILD_SUCCESS" != "true" ]; then
+    echo "📥 Attempting to download pre-built binary for $OS-$ARCH..."
+    BINARY_NAME="anyisland-${OS}-${ARCH}"
+    if [ "$OS" = "windows" ]; then
+        BINARY_NAME="anyisland-${OS}-${ARCH}.exe"
+    fi
+    
+    DOWNLOAD_URL="https://github.com/nathfavour/anyisland/releases/latest/download/${BINARY_NAME}"
+    
+    if curl -fsSL "$DOWNLOAD_URL" -o anyisland; then
+        echo "✅ Downloaded pre-built binary."
+        BUILD_SUCCESS=true
+    else
+        echo "⚠️  Failed to download pre-built binary."
+    fi
+fi
+
+if [ "$BUILD_SUCCESS" != "true" ]; then
+    if command -v go &> /dev/null; then
+        echo "🔨 Go is installed. Attempting to compile from remote source..."
+        if GOBIN="$(pwd)" go install github.com/nathfavour/anyisland/cmd/anyisland@master; then
+            echo "✅ Built successfully from remote source."
+            BUILD_SUCCESS=true
+        fi
+    fi
+fi
+
+if [ "$BUILD_SUCCESS" != "true" ]; then
+    echo "❌ Failed to download or build Anyisland binary. Exiting."
+    exit 1
 fi
 
 # 4. Hand-off to Anyisland for self-installation
