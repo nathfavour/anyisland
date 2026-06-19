@@ -40,3 +40,5 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+release:
+  mode: replace
