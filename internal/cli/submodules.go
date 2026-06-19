@@ -43,15 +43,29 @@ type submoduleTarget struct {
 }
 
 func buildPlanForGoModule(name, dir string) agent.BuildPlan {
-	target := filepath.Join("cmd", name)
-	if _, err := os.Stat(filepath.Join(dir, target)); err != nil {
-		target = "."
-	} else {
-		target = "./" + target
+	candidates := []string{
+		filepath.Join("cmd", name),
+		filepath.Join("cmd", "vibeaura"),
+		filepath.Join("cmd", "auracrab"),
+		filepath.Join("cmd", "anyisland"),
+	}
+	target := "."
+	for _, c := range candidates {
+		if _, err := os.Stat(filepath.Join(dir, c)); err == nil {
+			target = "./" + c
+			break
+		}
+	}
+	outName := filepath.Base(target)
+	if outName == "." {
+		outName = name
+	}
+	if name == "vibeauracle" {
+		outName = "vibeaura"
 	}
 	return agent.BuildPlan{
-		Steps:     []string{fmt.Sprintf("go build -ldflags \"-s -w\" -o %s %s", name, target)},
-		Bin:       name,
+		Steps:     []string{fmt.Sprintf("CGO_ENABLED=0 go build -ldflags \"-s -w\" -o %s %s", outName, target)},
+		Bin:       outName,
 		Toolchain: "go",
 	}
 }
