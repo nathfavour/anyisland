@@ -11,7 +11,6 @@ build/
 *.so
 *.dylib
 bin/
-pkg/
 
 # OS
 .DS_Store
