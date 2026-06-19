@@ -1,0 +1,24 @@
+{
+  "name": "vibeaura",
+  "version": "0.1.0",
+  "description": "Distributed, System-Intimate AI Engineering Ecosystem",
+  "repository": "github.com/nathfavour/vibeauracle",
+  "source_dir": ".",
+  "install_dir": "~/.local/bin",
+  "build": {
+    "toolchain": "go",
+    "steps": [
+      "CGO_ENABLED=0 go build -v -o vibeaura ./cmd/vibeaura"
+    ],
+    "bin": "vibeaura"
+  },
+  "runtime": {
+    "dependencies": [
+      "git"
+    ],
+    "daemon": false,
+    "pulse": true,
+    "managed_updates": false,
+    "update_command": "vibeaura update"
+  }
+}
