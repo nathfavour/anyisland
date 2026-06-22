@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -18,9 +19,18 @@ func runBuildStep(ctx context.Context, workDir, step, toolchain string) error {
 
 	fmt.Printf("Executing: %s\n", step)
 
+	goworkVal := "off"
+	absWorkDir, err := filepath.Abs(workDir)
+	if err == nil {
+		if _, err := os.Stat(filepath.Join(absWorkDir, "go.work")); err == nil {
+			goworkVal = filepath.Join(absWorkDir, "go.work")
+		}
+	}
+
 	if toolchain == "shell" || needsShell(step) {
 		cmd := exec.CommandContext(ctx, "bash", "-c", step)
 		cmd.Dir = workDir
+		cmd.Env = append(os.Environ(), "GOWORK="+goworkVal)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
@@ -46,8 +56,9 @@ func runBuildStep(ctx context.Context, workDir, step, toolchain string) error {
 
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Dir = workDir
+	cmd.Env = append(os.Environ(), "GOWORK="+goworkVal)
 	if len(env) > 0 {
-		cmd.Env = append(os.Environ(), env...)
+		cmd.Env = append(cmd.Env, env...)
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

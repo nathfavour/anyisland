@@ -62,6 +62,10 @@ func buildPlanForGoModule(name, dir string) agent.BuildPlan {
 	}
 	if name == "vibeauracle" {
 		outName = "vibeaura"
+		// If cmd/vibeaura exists inside the dir, compile from there
+		if _, err := os.Stat(filepath.Join(dir, "cmd", "vibeaura")); err == nil {
+			target = "./cmd/vibeaura"
+		}
 	}
 	return agent.BuildPlan{
 		Steps:     []string{fmt.Sprintf("CGO_ENABLED=0 go build -ldflags '-s -w' -o %s %s", outName, target)},
@@ -79,13 +83,17 @@ func (i *Ingestor) resolveSubmoduleTargets(workDir string) ([]submoduleTarget, e
 
 	var targets []submoduleTarget
 	lines := strings.Split(string(data), "\n")
-	var currentPath string
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "path = ") {
-			currentPath = strings.TrimSpace(strings.TrimPrefix(line, "path = "))
+		if !strings.HasPrefix(line, "path =") && !strings.HasPrefix(line, "path=") {
 			continue
 		}
+		
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) < 2 {
+			continue
+		}
+		currentPath := strings.TrimSpace(parts[1])
 		if currentPath == "" {
 			continue
 		}
@@ -100,8 +108,11 @@ func (i *Ingestor) resolveSubmoduleTargets(workDir string) ([]submoduleTarget, e
 					WorkDir:  subDir,
 					Manifest: m,
 				})
+				continue
 			}
-		} else if _, err := os.Stat(filepath.Join(subDir, "go.mod")); err == nil {
+		}
+		
+		if _, err := os.Stat(filepath.Join(subDir, "go.mod")); err == nil {
 			name := filepath.Base(currentPath)
 			targets = append(targets, submoduleTarget{
 				Name:    name,
@@ -112,7 +123,6 @@ func (i *Ingestor) resolveSubmoduleTargets(workDir string) ([]submoduleTarget, e
 				},
 			})
 		}
-		currentPath = ""
 	}
 	return targets, nil
 }
@@ -180,6 +190,12 @@ func (i *Ingestor) buildSubmoduleBinary(ctx context.Context, target submoduleTar
 	dst := filepath.Join(binDir, filepath.Base(plan.Bin))
 	if target.Manifest.BinName != "" {
 		dst = filepath.Join(binDir, target.Manifest.BinName)
+	}
+
+	if _, err := os.Stat(dst); err == nil {
+		oldBin := dst + ".bak"
+		_ = os.Remove(oldBin)
+		_ = os.Rename(dst, oldBin)
 	}
 
 	data, err := os.ReadFile(src)
