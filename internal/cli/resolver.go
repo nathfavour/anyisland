@@ -44,6 +44,11 @@ func NewResolver() *Resolver {
 }
 
 func (r *Resolver) Resolve(ctx context.Context, query string) (string, error) {
+	if query == "polygeist" {
+		fmt.Println("Found exact match for alias 'polygeist': https://github.com/nathfavour/polygeist")
+		return "https://github.com/nathfavour/polygeist", nil
+	}
+
 	fmt.Printf("🔍 Searching for '%s'...\n", query)
 
 	// Tier 1: Beacon Search (Code Search for anyisland.json)
