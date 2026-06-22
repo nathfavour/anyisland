@@ -656,8 +656,14 @@ func (i *Ingestor) Ingest(ctx context.Context, repoURL string) (*Manifest, strin
 		// 1. Check if it's an official package in the current source tree
 		officialPath := filepath.Join("packages", "official", repoURL, "anyisland.json")
 		if _, err := os.Stat(officialPath); err == nil {
-			repoURL, _ = filepath.Abs(filepath.Dir(officialPath))
-			fmt.Printf("Using official package manifest: %s\n", officialPath)
+			m, err := LoadManifest(officialPath)
+			if err == nil && m.Repository != "" {
+				repoURL = normalizeRepoURL(m.Repository)
+				fmt.Printf("Using official package: %s -> %s\n", officialPath, repoURL)
+			} else {
+				repoURL, _ = filepath.Abs(filepath.Dir(officialPath))
+				fmt.Printf("Using official package path: %s\n", officialPath)
+			}
 		} else {
 			discovered, err := i.resolver.Resolve(ctx, repoURL)
 			if err == nil && discovered != "" {
