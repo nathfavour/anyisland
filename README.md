@@ -14,34 +14,34 @@ Full documentation is available at [nathfavour.github.io/anyisland/](https://nat
 
 ## Quick Start
 
-### 1. Install
+### 1. Install, Update & Uninstall
 ```bash
+# Install Anyisland standalone
 curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install.sh | bash
-```
 
-### 2. Update
-```bash
+# Or install Anyisland and a target tool in a single command
+curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install.sh | bash -s -- <owner/repo>
+
+# Update (Anyisland updates automatically on every run, but you can force it)
 anyisland update anyisland
-```
 
-### 3. Uninstall
-```bash
+# Uninstall Anyisland
 anyisland uninstall
 ```
 
-### 4. Setup
+### 2. Setup
 Initialize your local Island and configure your PATH.
 ```bash
 anyisland setup
 ```
 
-### 5. Ingest a Tool
+### 3. Ingest a Tool
 Transform any GitHub repository into an installed tool via AI analysis.
 ```bash
 anyisland ingest github.com/user/repo
 ```
 
-### 6. List Tools
+### 4. List Tools
 See what's installed and managed.
 ```bash
 anyisland list
@@ -55,5 +55,6 @@ anyisland list
 
 ## Development
 ```bash
+# Build CLI
 go build -o anyisland ./cmd/anyisland
 ```
