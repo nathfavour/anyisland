@@ -4,76 +4,129 @@ sidebar_position: 3
 
 # Distribution & Integration
 
-Anyisland allows developers to distribute their tools effortlessly and integrate them deeply into the user's sovereign environment.
+Anyisland provides a zero-friction, platform-agnostic distribution mechanism for modern CLI tools and sovereign software. Tools integrating with Anyisland can provide users with an instant single-command install experience without requiring separate package manager setup.
 
-## 1. Creating a Manifest (`anyisland.json`)
+---
 
-The manifest is the source of truth for Anyisland. Placing this file in your repository's root allows Anyisland to skip AI analysis and follow your explicit instructions.
+## 1. Universal One-Command Bootstrap (Recommended Default)
 
-See the [**Manifest Specification**](./manifest-spec.md) for a detailed breakdown of all available fields and best practices.
+The default and cleanest distribution method is the **Anyisland Universal Bootstrap Hook**. This allows end users to install your tool directly using a single curl command. The script bootstraps Anyisland (if not already present) and immediately delegates to building/installing your tool.
 
-### Basic Schema
+### User Install Snippet
+
+Add this to your project's `README.md`:
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install.sh | bash -s -- <owner/repo>
+```
+
+*Example for `nathfavour/threader`:*
+```bash
+curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install.sh | bash -s -- nathfavour/threader
+```
+
+If the user already has Anyisland installed, they can also install your tool via:
+```bash
+anyisland install <owner/repo>
+```
+
+---
+
+## 2. Defining the Manifest (`anyisland.json`)
+
+Placing an `anyisland.json` in your repository's root tells Anyisland how to resolve runtime dependencies and build your project deterministically.
+
+See the [**Manifest Specification**](./manifest-spec.md) for full field details.
+
+### Standard Go / Rust / C / Native Schema
 
 ```json
 {
-  "name": "tool-name",
+  "name": "mytool",
   "version": "1.0.0",
+  "description": "High performance marketing engine.",
+  "repository": "github.com/owner/mytool",
+  "source_dir": "~/.mytool/source",
+  "install_dir": "~/.local/bin",
   "build": {
     "steps": [
-      "go build -o mytool ."
+      "bash install.sh"
     ],
     "bin": "mytool",
-    "install_dir": "/custom/path"
+    "toolchain": "go"
+  },
+  "runtime": {
+    "dependencies": [
+      "libtesseract-dev",
+      "libleptonica-dev"
+    ],
+    "pulse": true
   }
 }
 ```
 
-#### Field Reference
-- **`name`**: The unique identifier for your tool.
-- **`version`**: The current semantic version.
-- **`build.steps`**: An array of shell commands executed sequentially in the source root.
-- **`build.bin`**: The relative path to the resulting executable after build steps finish.
-- **`build.install_dir`** *(Optional)*: An absolute path if you want to override the default `~/.anyisland/bin` location.
+---
+
+## 3. Tool `install.sh` Adapter Pattern
+
+To give users maximum flexibility, your repository's local `install.sh` can act as an adapter that bootstraps through Anyisland when run standalone, and builds the binary when called inside an Anyisland cycle:
+
+```bash
+#!/bin/bash
+set -e
+
+# If run directly outside Anyisland, bootstrap via Anyisland
+if ! command -v anyisland &> /dev/null; then
+    echo "🏝️ Bootstrapping via Anyisland..."
+    curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install.sh | bash -s -- <owner/repo>
+    exit 0
+fi
+
+# Build logic when invoked by Anyisland
+echo "Building binary..."
+go build -o mytool ./cmd/mytool
+```
 
 ---
 
-## 2. Anyisland-Aware Tools
+## 4. Anyisland-Aware Tools (Pulse & Auto-Registration)
 
-Tools can integrate with the Anyisland ecosystem to enable features like auto-discovery and state management.
+Tools can integrate with the local Anyisland daemon (`anyisland daemon`) to enable automatic discovery, telemetry, and live registration.
 
-### Auto-Registration
-A tool can register itself with the local Anyisland daemon (`anyisland daemon`) by sending a UDP packet to port `1995`.
+### Auto-Registration via UDP
+A tool can register itself with the local Anyisland daemon by sending a UDP packet to port `1995`:
 
-**Example (Go):**
 ```go
 import (
-    "net"
     "encoding/json"
+    "net"
 )
 
-func Register() {
+func RegisterWithIsland() {
     packet := map[string]string{
         "op":      "REGISTER",
-        "name":    "my-tool",
-        "source":  "github.com/me/my-tool",
+        "name":    "mytool",
+        "source":  "github.com/owner/mytool",
         "version": "v1.0.0",
         "type":    "binary",
     }
     data, _ := json.Marshal(packet)
-    conn, _ := net.Dial("udp", "localhost:1995")
-    conn.Write(data)
+    conn, err := net.Dial("udp", "127.0.0.1:1995")
+    if err == nil {
+        defer conn.Close()
+        conn.Write(data)
+    }
 }
 ```
 
 ---
 
-## 3. Contributing Official Packages
+## 5. Contributing Official Packages
 
-Anyisland maintains a set of "Official Packages" for common utilities. These manifests are stored in the core repository under `packages/official/`.
+Anyisland maintains a set of "Official Packages" for common utilities in `packages/official/`.
 
 To contribute:
 1. Fork the Anyisland repository.
 2. Create `packages/official/<name>/anyisland.json`.
 3. Submit a Pull Request.
-
-Official packages are prioritized by the `anyisland install` command and are verified for platform compatibility.

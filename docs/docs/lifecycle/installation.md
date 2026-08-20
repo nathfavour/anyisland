@@ -1,20 +1,24 @@
 # Installation & System Integration
 
-Anyisland is designed to be installed without root permissions, living entirely within the user's home directory.
+Anyisland is designed to be installed without root permissions, living entirely within the user's home directory. It supports standalone installation as well as unified single-command installation for target tools.
 
-## The Bootstrap Process
+## The Universal Bootstrap Process
 
-The standard installation uses a universal bootstrap script:
-
+### 1. Standalone Anyisland Installation
 ```bash
-curl -fsSL https://anyisland.io/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install.sh | bash
 ```
 
-### 1. Platform Detection
-The script detects the host OS and architecture (e.g., `linux-arm64`) to select the correct binary package.
+### 2. Single-Command Tool Installation (Target Hook)
+Any tool can use Anyisland as its zero-friction installer by passing its GitHub repository slug as an argument to the bootstrap script:
 
-### 2. Binary Hand-off
-The script downloads the specific binary and executes it with the `self-install` flag. This transfers the installation logic from the ephemeral shell script to the robust Anyisland binary itself.
+```bash
+curl -fsSL https://raw.githubusercontent.com/nathfavour/anyisland/master/install.sh | bash -s -- <owner/repo>
+```
+
+When a target repo is passed:
+1. The script checks if Anyisland is installed/up-to-date and bootstraps it if necessary.
+2. The script immediately executes `anyisland install <owner/repo>` to resolve dependencies and build the tool.
 
 ## System Integration (`self-install`)
 
@@ -32,4 +36,4 @@ export PATH="$PATH:$HOME/.local/bin"
 
 ## Security Initialization
 
-During the first installation, Anyisland generates a unique **Master Key** used for E2EE shell history and local vault encryption. This key is stored securely using the platform's native keyring (via the [PAL](../internal/pal/README.md)).
+During the first installation, Anyisland generates a unique **Master Key** used for E2EE shell history and local vault encryption. This key is stored securely using the platform's native keyring (via the Platform Abstraction Layer).
